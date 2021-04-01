@@ -117,9 +117,9 @@ class Game():
 
     def show_grid_lines(self):
         for x in range(0, WIDTH, TILESIZE):
-            pygame.draw.line(self.screen, WHITE, (x, 0), (x, HEIGHT))
+            pygame.draw.line(self.screen, LIGHTBLUE, (x, 0), (x, HEIGHT))
         for y in range(0, HEIGHT, TILESIZE):
-            pygame.draw.line(self.screen, WHITE, (0, y), (WIDTH, y))
+            pygame.draw.line(self.screen, LIGHTBLUE, (0, y), (WIDTH, y))
 
     def home_screen(self):
         pass
