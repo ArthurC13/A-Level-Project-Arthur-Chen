@@ -78,8 +78,26 @@ class Game():
     def new_game(self):
         self.sprite_group_reset()
         self.player = Player(self, 10, 10)
-        for x in range(10, 20):
-            Wall(self, x, 5)
+        self.level = 1
+        self.load_map(self.level)
+
+    def load_map_file(self, map_path):
+        self.maplist = []
+        with open(map_path) as f:
+            for i in f:
+                self.maplist.append(i.strip())
+
+    def load_map(self, level):
+        self.load_map_file('maps/map'+str(level)+'.txt')
+        x = 0
+        y = 0
+        for line in self.maplist:
+            for item in line:
+                if item == '1':
+                    Wall(self, x, y)
+                x += 1
+            x = 0
+            y += 1
 
     def game_loop(self):
         self.done = False
