@@ -27,7 +27,8 @@ TILESIZE = 32
 GRIDWIDTH = WIDTH/TILESIZE
 GRIDHEIGHT = HEIGHT/TILESIZE
 
-PLAYERSPEED = 400
+PLAYERACC = 0.9
+FRICTION = -0.15
 
 # -- Sprites Classes
 class Player(pygame.sprite.Sprite):
@@ -38,50 +39,48 @@ class Player(pygame.sprite.Sprite):
         self.image = pygame.Surface((TILESIZE, TILESIZE))
         self.image.fill(BLUE)
         self.rect = self.image.get_rect()
-        self.x = x * TILESIZE
-        self.y = y * TILESIZE
+        self.pos = pygame.math.Vector2(x * TILESIZE, y * TILESIZE)
+        self.vel = pygame.math.Vector2(0, 0)
+        self.acc = pygame.math.Vector2(0, 0)
 
     def wall_collisions(self, direction):
         hits = pygame.sprite.spritecollide(self, game.wall_group, False)
         if hits:
             if direction == 'x':
-                if self.x_speed > 0:
-                    self.x = hits[0].rect.left - self.rect.width
-                elif self.x_speed < 0:
-                    self.x = hits[0].rect.right
-                self.x_speed = 0
-                self.rect.x = self.x
+                if self.vel.x > 0:
+                    self.pos.x = hits[0].rect.left - self.rect.width
+                elif self.vel.x < 0:
+                    self.pos.x = hits[0].rect.right
+                self.vel.x = 0
+                self.rect.x = int(self.pos.x)
             if direction == 'y':
-                if self.y_speed > 0:
-                    self.y = hits[0].rect.top - self.rect.height
-                elif self.y_speed < 0:
-                    self.y = hits[0].rect.bottom
-                self.y_speed = 0
-                self.rect.y = self.y
+                if self.vel.y > 0:
+                    self.pos.y = hits[0].rect.top - self.rect.height
+                elif self.vel.y < 0:
+                    self.pos.y = hits[0].rect.bottom
+                self.vel.y = 0
+                self.rect.y = int(self.pos.y)
 
     def movement_controls(self):
-        self.x_speed = 0
-        self.y_speed = 0
+        self.acc = pygame.math.Vector2(0, 0)
         keys = pygame.key.get_pressed()
         if keys[pygame.K_UP]:
-            self.y_speed = -PLAYERSPEED
+            self.acc.y = -PLAYERACC
         if keys[pygame.K_LEFT]:
-            self.x_speed = -PLAYERSPEED
+            self.acc.x = -PLAYERACC
         if keys[pygame.K_DOWN]:
-            self.y_speed = PLAYERSPEED
+            self.acc.y = PLAYERACC
         if keys[pygame.K_RIGHT]:
-            self.x_speed = PLAYERSPEED
-        if self.x_speed != 0 and self.y_speed != 0:
-            self.x_speed *= 0.7071
-            self.y_speed *= 0.7071
+            self.acc.x = PLAYERACC
 
     def update(self):
         self.movement_controls()
-        self.x += self.x_speed * self.game.dt
-        self.y += self.y_speed * self.game.dt
-        self.rect.x = self.x
+        self.acc += self.vel*FRICTION
+        self.vel += self.acc
+        self.pos += self.vel + 0.5 * self.acc
+        self.rect.x = int(self.pos.x)
         self.wall_collisions('x')
-        self.rect.y = self.y
+        self.rect.y = int(self.pos.y)
         self.wall_collisions('y')
 
 class Wall(pygame.sprite.Sprite):
