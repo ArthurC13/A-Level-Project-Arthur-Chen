@@ -27,6 +27,8 @@ TILESIZE = 32
 GRIDWIDTH = WIDTH/TILESIZE
 GRIDHEIGHT = HEIGHT/TILESIZE
 
+PLAYERSPEED = 400
+
 # -- Sprites Classes
 class Player(pygame.sprite.Sprite):
     def __init__(self, game, x, y):
@@ -36,16 +38,51 @@ class Player(pygame.sprite.Sprite):
         self.image = pygame.Surface((TILESIZE, TILESIZE))
         self.image.fill(BLUE)
         self.rect = self.image.get_rect()
-        self.x = x
-        self.y = y
+        self.x = x * TILESIZE
+        self.y = y * TILESIZE
 
-    def move(self, x_speed=0, y_speed=0):
-        self.x += x_speed
-        self.y += y_speed
+    def wall_collisions(self, direction):
+        hits = pygame.sprite.spritecollide(self, game.wall_group, False)
+        if hits:
+            if direction == 'x':
+                if self.x_speed > 0:
+                    self.x = hits[0].rect.left - self.rect.width
+                elif self.x_speed < 0:
+                    self.x = hits[0].rect.right
+                self.x_speed = 0
+                self.rect.x = self.x
+            if direction == 'y':
+                if self.y_speed > 0:
+                    self.y = hits[0].rect.top - self.rect.height
+                elif self.y_speed < 0:
+                    self.y = hits[0].rect.bottom
+                self.y_speed = 0
+                self.rect.y = self.y
+
+    def movement_controls(self):
+        self.x_speed = 0
+        self.y_speed = 0
+        keys = pygame.key.get_pressed()
+        if keys[pygame.K_UP]:
+            self.y_speed = -PLAYERSPEED
+        if keys[pygame.K_LEFT]:
+            self.x_speed = -PLAYERSPEED
+        if keys[pygame.K_DOWN]:
+            self.y_speed = PLAYERSPEED
+        if keys[pygame.K_RIGHT]:
+            self.x_speed = PLAYERSPEED
+        if self.x_speed != 0 and self.y_speed != 0:
+            self.x_speed *= 0.7071
+            self.y_speed *= 0.7071
 
     def update(self):
-        self.rect.x = self.x * TILESIZE
-        self.rect.y = self.y * TILESIZE
+        self.movement_controls()
+        self.x += self.x_speed * self.game.dt
+        self.y += self.y_speed * self.game.dt
+        self.rect.x = self.x
+        self.wall_collisions('x')
+        self.rect.y = self.y
+        self.wall_collisions('y')
 
 class Wall(pygame.sprite.Sprite):
     def __init__(self, game, x, y):
@@ -77,7 +114,6 @@ class Game():
 
     def new_game(self):
         self.sprite_group_reset()
-        self.player = Player(self, 10, 10)
         self.level = 1
         self.load_map(self.level)
 
@@ -95,6 +131,8 @@ class Game():
             for item in line:
                 if item == '1':
                     Wall(self, x, y)
+                if item == 'p':
+                    self.player = Player(self, x, y)
                 x += 1
             x = 0
             y += 1
@@ -102,7 +140,7 @@ class Game():
     def game_loop(self):
         self.done = False
         while not self.done:
-            self.clock.tick(FPS)
+            self.dt = self.clock.tick(FPS)/1000  #delta time for time based movements
             self.events()
             self.update()
             self.draw()
@@ -115,14 +153,6 @@ class Game():
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
                     self.pause_game()
-                if event.key == pygame.K_LEFT:
-                    self.player.move(x_speed=-1)
-                if event.key == pygame.K_RIGHT:
-                    self.player.move(x_speed=1)
-                if event.key == pygame.K_UP:
-                    self.player.move(y_speed=-1)
-                if event.key == pygame.K_DOWN:
-                    self.player.move(y_speed=1)
 
     def update(self):
         self.all_sprites_group.update()
