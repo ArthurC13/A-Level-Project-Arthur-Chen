@@ -28,7 +28,9 @@ GRIDWIDTH = WIDTH/TILESIZE
 GRIDHEIGHT = HEIGHT/TILESIZE
 
 PLAYERACC = 0.9
+JUMPVEL = -10
 FRICTION = -0.15
+GRAVITY = 0.3
 
 # -- Sprites Classes
 class Player(pygame.sprite.Sprite):
@@ -62,14 +64,21 @@ class Player(pygame.sprite.Sprite):
                 self.rect.y = int(self.pos.y)
 
     def movement_controls(self):
-        self.acc = pygame.math.Vector2(0, 0.2)
+        self.acc = pygame.math.Vector2(0, GRAVITY)
         keys = pygame.key.get_pressed()
-        if keys[pygame.K_UP]:
-            self.acc.y = -PLAYERACC
         if keys[pygame.K_LEFT]:
             self.acc.x = -PLAYERACC
         if keys[pygame.K_RIGHT]:
             self.acc.x = PLAYERACC
+        if keys[pygame.K_UP]:
+            self.jump()
+
+    def jump(self):
+        self.rect.y += 1
+        hits = pygame.sprite.spritecollide(self, game.wall_group, False)
+        self.rect.y -= 1
+        if hits:
+            self.vel.y = JUMPVEL
 
     def update(self):
         self.movement_controls()
@@ -111,7 +120,7 @@ class Game():
 
     def new_game(self):
         self.sprite_group_reset()
-        self.level = 2
+        self.level = 1
         self.load_map(self.level)
 
     def load_map_file(self, map_path):
