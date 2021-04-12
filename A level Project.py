@@ -18,8 +18,8 @@ LIGHTBLUE = (209, 237, 242)
 BRIGHTBLUE = (15, 137, 202)
 
 # -- Game settings
-WIDTH = 1024
-HEIGHT = 768
+WIDTH = 1024        #32*32
+HEIGHT = 768        #24*32
 FPS = 60
 GAMETITLE = 'A Level Project'
 
@@ -62,20 +62,18 @@ class Player(pygame.sprite.Sprite):
                 self.rect.y = int(self.pos.y)
 
     def movement_controls(self):
-        self.acc = pygame.math.Vector2(0, 0)
+        self.acc = pygame.math.Vector2(0, 0.2)
         keys = pygame.key.get_pressed()
         if keys[pygame.K_UP]:
             self.acc.y = -PLAYERACC
         if keys[pygame.K_LEFT]:
             self.acc.x = -PLAYERACC
-        if keys[pygame.K_DOWN]:
-            self.acc.y = PLAYERACC
         if keys[pygame.K_RIGHT]:
             self.acc.x = PLAYERACC
 
     def update(self):
         self.movement_controls()
-        self.acc += self.vel*FRICTION
+        self.acc.x += self.vel.x*FRICTION
         self.vel += self.acc
         self.pos += self.vel + 0.5 * self.acc
         self.rect.x = int(self.pos.x)
@@ -113,7 +111,7 @@ class Game():
 
     def new_game(self):
         self.sprite_group_reset()
-        self.level = 1
+        self.level = 2
         self.load_map(self.level)
 
     def load_map_file(self, map_path):
@@ -158,7 +156,7 @@ class Game():
 
     def draw(self):
         self.screen.fill(DARKGREY)
-        self.show_grid_lines()
+        #self.show_grid_lines()
         self.all_sprites_group.draw(self.screen)
         pygame.display.flip()
 
