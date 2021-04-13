@@ -87,6 +87,7 @@ class Player(pygame.sprite.Sprite):
         self.movement_controls()
         self.acc.x += self.vel.x*FRICTION
         self.vel += self.acc
+        self.vel.y = min(self.vel.y, 15)        #termial velocity
         self.pos += self.vel + 0.5 * self.acc
         self.rect.x = int(self.pos.x)
         self.wall_collisions('x')
@@ -128,8 +129,8 @@ class Camera():
         return entity.rect.move(self.camera.topleft)
 
     def update(self, target):
-        x = -target.rect.x + int(WIDTH / 2)
-        y = -target.rect.y + int(HEIGHT / 2)
+        x = -target.rect.x - int(target.rect.width / 2) + int(WIDTH / 2)
+        y = -target.rect.y + int(HEIGHT / 4*3)
 
         x = min(0, x)
         y = min(0, y)
@@ -154,7 +155,7 @@ class Game():
 
     def new_game(self):
         self.sprite_group_reset()
-        self.level = 2
+        self.level = 1
         self.load_map(self.level)
         self.camera = Camera(self.map.width, self.map.height)
 
@@ -190,6 +191,8 @@ class Game():
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
                     self.pause_game()
+                if event.key == pygame.K_p:
+                    print(self.player.pos, -self.player.rect.x - int(self.player.rect.width / 2) + int(WIDTH / 2))
 
     def update(self):
         self.all_sprites_group.update()
@@ -212,7 +215,7 @@ class Game():
         pass
 
     def pause_game(self):
-        pass
+        self.done = True
             
     def exit_game(self):
         pygame.quit()
