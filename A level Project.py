@@ -16,6 +16,7 @@ PINK = (255,192,203)
 LIGHTPINK = (239, 154, 154)
 LIGHTBLUE = (209, 237, 242)
 BRIGHTBLUE = (15, 137, 202)
+NIGHTBLUE = (34, 36, 64)
 
 # -- Game settings
 WIDTH = 1024        #32*32
@@ -23,12 +24,14 @@ HEIGHT = 768        #24*32
 FPS = 60
 GAMETITLE = 'A Level Project'
 
+BGCOLOUR = NIGHTBLUE
+
 TILESIZE = 32
 GRIDWIDTH = WIDTH/TILESIZE
 GRIDHEIGHT = HEIGHT/TILESIZE
 
 PLAYERACC = 0.9
-JUMPVEL = -10
+JUMPVEL = -9.5
 FRICTION = -0.15
 GRAVITY = 0.3
 
@@ -91,17 +94,48 @@ class Player(pygame.sprite.Sprite):
         self.wall_collisions('y')
 
 class Wall(pygame.sprite.Sprite):
-    def __init__(self, game, x, y):
+    def __init__(self, game, x, y, colour):
         self.groups = game.all_sprites_group, game.wall_group
         pygame.sprite.Sprite.__init__(self, self.groups)
         self.game = game
         self.image = pygame.Surface((TILESIZE, TILESIZE))
-        self.image.fill(PURPLE)
+        self.image.fill(colour)
         self.rect = self.image.get_rect()
         self.x = x
         self.y = y
         self.rect.x = x * TILESIZE
         self.rect.y = y * TILESIZE
+
+# -- Map and Camera
+class Map():
+    def __init__(self, map_path):
+        self.maplist = []
+        with open(map_path) as f:
+            for i in f:
+                self.maplist.append(i.strip())
+        self.tilewidth = len(self.maplist[0])
+        self.tileheight = len(self.maplist)
+        self.width = self.tilewidth * TILESIZE
+        self.height = self.tileheight * TILESIZE
+
+class Camera():
+    def __init__(self, width, height):
+        self.camera = pygame.Rect(0, 0, width, height)
+        self.width = width
+        self.height = height
+
+    def apply(self, entity):
+        return entity.rect.move(self.camera.topleft)
+
+    def update(self, target):
+        x = -target.rect.x + int(WIDTH / 2)
+        y = -target.rect.y + int(HEIGHT / 2)
+
+        x = min(0, x)
+        y = min(0, y)
+        x = max(-(self.width - WIDTH), x)
+        y = max(-(self.height - HEIGHT), y)
+        self.camera = pygame.Rect(x, y, self.width, self.height)
 
 # -- Main Game Class
 class Game():
@@ -120,23 +154,20 @@ class Game():
 
     def new_game(self):
         self.sprite_group_reset()
-        self.level = 1
+        self.level = 2
         self.load_map(self.level)
-
-    def load_map_file(self, map_path):
-        self.maplist = []
-        with open(map_path) as f:
-            for i in f:
-                self.maplist.append(i.strip())
+        self.camera = Camera(self.map.width, self.map.height)
 
     def load_map(self, level):
-        self.load_map_file('maps/map'+str(level)+'.txt')
+        self.map = Map('maps/map'+str(level)+'.txt')
         x = 0
         y = 0
-        for line in self.maplist:
+        for line in self.map.maplist:
             for item in line:
                 if item == '1':
-                    Wall(self, x, y)
+                    Wall(self, x, y, PURPLE)
+                if item == '2':
+                    Wall(self, x, y, BRIGHTBLUE)
                 if item == 'p':
                     self.player = Player(self, x, y)
                 x += 1
@@ -146,7 +177,7 @@ class Game():
     def game_loop(self):
         self.done = False
         while not self.done:
-            self.dt = self.clock.tick(FPS)/1000  #delta time for time based movements
+            self.clock.tick(FPS)
             self.events()
             self.update()
             self.draw()
@@ -162,11 +193,13 @@ class Game():
 
     def update(self):
         self.all_sprites_group.update()
+        self.camera.update(self.player)
 
     def draw(self):
-        self.screen.fill(DARKGREY)
-        #self.show_grid_lines()
-        self.all_sprites_group.draw(self.screen)
+        self.screen.fill(BGCOLOUR)
+        self.show_grid_lines()
+        for i in self.all_sprites_group:
+            self.screen.blit(i.image, self.camera.apply(i))
         pygame.display.flip()
 
     def show_grid_lines(self):
