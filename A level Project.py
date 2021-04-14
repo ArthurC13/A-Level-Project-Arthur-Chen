@@ -35,7 +35,7 @@ JUMPVEL = -9.5
 FRICTION = -0.15
 GRAVITY = 0.3
 
-CAMERALAG = 30
+CAMERALAG = 25
 
 # -- Sprites Classes
 class Player(pygame.sprite.Sprite):
@@ -181,7 +181,7 @@ class Game():
 
     def new_game(self):
         self.sprite_group_reset()
-        self.level = 2
+        self.level = 3
         self.load_map(self.level)
         self.camera = Camera(self.map.width, self.map.height)
 
