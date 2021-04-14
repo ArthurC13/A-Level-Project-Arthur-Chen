@@ -1,4 +1,5 @@
 import pygame
+import random
 import sys
 
 # -- Global Constants
@@ -34,6 +35,8 @@ PLAYERACC = 0.9
 JUMPVEL = -9.5
 FRICTION = -0.15
 GRAVITY = 0.3
+
+LEVEL = 5
 
 CAMERALAG = 25
 
@@ -109,6 +112,7 @@ class Wall(pygame.sprite.Sprite):
         self.rect.x = x * TILESIZE
         self.rect.y = y * TILESIZE
 
+        
 # -- Map and Camera
 class Map():
     def __init__(self, map_path):
@@ -181,7 +185,7 @@ class Game():
 
     def new_game(self):
         self.sprite_group_reset()
-        self.level = 3
+        self.level = LEVEL
         self.load_map(self.level)
         self.camera = Camera(self.map.width, self.map.height)
 
