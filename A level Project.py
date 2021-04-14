@@ -118,12 +118,14 @@ class Map():
         self.tileheight = len(self.maplist)
         self.width = self.tilewidth * TILESIZE
         self.height = self.tileheight * TILESIZE
-
+'''
 class Camera():
     def __init__(self, width, height):
         self.camera = pygame.Rect(0, 0, width, height)
         self.width = width
         self.height = height
+        self.x = 0
+        self.y = 0
 
     def apply(self, entity):
         return entity.rect.move(self.camera.topleft)
@@ -137,6 +139,19 @@ class Camera():
         x = max(-(self.width - WIDTH), x)
         y = max(-(self.height - HEIGHT), y)
         self.camera = pygame.Rect(x, y, self.width, self.height)
+'''
+class Camera():
+    def __init__(self):
+        self.x = 0
+        self.y = 0
+
+    def apply(self, entity):
+        return entity.rect.move(-self.x, -self.y)
+
+    def update(self, target):
+        self.x += (target.rect.x - self.x - WIDTH//2)//20
+        self.y += (target.rect.y - self.y - HEIGHT//2)//20
+
 
 # -- Main Game Class
 class Game():
@@ -147,6 +162,7 @@ class Game():
         pygame.display.set_caption(GAMETITLE)
         self.clock = pygame.time.Clock()
         pygame.key.set_repeat(100, 50)
+        self.myfont = pygame.font.SysFont('Comic Sans MS', 30)
 
     def sprite_group_reset(self):
         self.all_sprites_group = pygame.sprite.Group()
@@ -157,7 +173,8 @@ class Game():
         self.sprite_group_reset()
         self.level = 1
         self.load_map(self.level)
-        self.camera = Camera(self.map.width, self.map.height)
+        #self.camera = Camera(self.map.width, self.map.height)
+        self.camera = Camera()
 
     def load_map(self, level):
         self.map = Map('maps/map'+str(level)+'.txt')
@@ -198,11 +215,20 @@ class Game():
         self.all_sprites_group.update()
         self.camera.update(self.player)
 
+    def blit_texts(self, texts, colour, x, y, y_intervals, font):
+        textlist = texts.split('\n')
+        counter = 0
+        for line in textlist:
+            self.screen.blit(font.render(line, False, colour), (x, y + (y_intervals*counter)))
+            counter += 1
+
     def draw(self):
         self.screen.fill(BGCOLOUR)
         self.show_grid_lines()
         for i in self.all_sprites_group:
             self.screen.blit(i.image, self.camera.apply(i))
+        string = str(self.camera.x) + '\n' + str(self.camera.y) + '\n' + str(self.player.rect.x) + '\n' + str(self.player.rect.y)
+        self.blit_texts(string, WHITE, 0, 0, 50, self.myfont)
         pygame.display.flip()
 
     def show_grid_lines(self):
