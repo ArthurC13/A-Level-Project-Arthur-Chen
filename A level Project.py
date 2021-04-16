@@ -6,7 +6,6 @@ import sys
 
 # -- Colours
 BLACK = (0,0,0)
-DARKGREY = (40, 40, 40)
 WHITE = (255,255,255)
 BLUE = (50,50,255)
 GREEN = (0, 255, 0)
@@ -14,7 +13,6 @@ RED = (255, 0, 0)
 YELLOW = (255,255,0)
 PURPLE = (103,13,173)
 PINK = (255,192,203)
-LIGHTPINK = (239, 154, 154)
 LIGHTBLUE = (209, 237, 242)
 BRIGHTBLUE = (15, 137, 202)
 NIGHTBLUE = (34, 36, 64)
@@ -33,17 +31,20 @@ GRIDHEIGHT = HEIGHT/TILESIZE
 
 PLAYERACC = 0.9
 JUMPVEL = -9.5
+LADDERVEL = 4
 FRICTION = -0.15
 GRAVITY = 0.3
 
-LEVEL = 5
+LEVEL = 0
 
 CAMERALAG = 25
 
 # -- Sprites Classes
+
+#Player class
 class Player(pygame.sprite.Sprite):
     def __init__(self, game, x, y):
-        self.groups = game.all_sprites_group
+        self.groups = game.player_group
         pygame.sprite.Sprite.__init__(self, self.groups)
         self.game = game
         self.image = pygame.Surface((TILESIZE, TILESIZE))
@@ -71,15 +72,36 @@ class Player(pygame.sprite.Sprite):
                 self.vel.y = 0
                 self.rect.y = int(self.pos.y)
 
+    def on_ladder(self):
+        hits = pygame.sprite.spritecollide(self, game.ladder_group, False)
+        if hits:
+            return [True, hits[0].rect.left]
+        return [False]
+
     def movement_controls(self):
         self.acc = pygame.math.Vector2(0, GRAVITY)
+        ladder = self.on_ladder()
         keys = pygame.key.get_pressed()
-        if keys[pygame.K_LEFT]:
-            self.acc.x = -PLAYERACC
-        if keys[pygame.K_RIGHT]:
-            self.acc.x = PLAYERACC
-        if keys[pygame.K_UP]:
-            self.jump()
+        if not ladder[0]:
+            if keys[pygame.K_LEFT]:
+                self.acc.x = -PLAYERACC
+            if keys[pygame.K_RIGHT]:
+                self.acc.x = PLAYERACC
+            if keys[pygame.K_UP]:
+                self.jump()
+            if keys[pygame.K_DOWN]:
+                self.interact()
+        else:
+            self.acc.y = 0
+            self.vel.y = 0
+            if keys[pygame.K_LEFT]:
+                self.acc.x = -PLAYERACC
+            if keys[pygame.K_RIGHT]:
+                self.acc.x = PLAYERACC
+            if keys[pygame.K_UP]:
+                self.vel.y = -LADDERVEL
+            if keys[pygame.K_DOWN]:
+                self.vel.y = LADDERVEL
 
     def jump(self):
         self.rect.y += 1
@@ -87,6 +109,9 @@ class Player(pygame.sprite.Sprite):
         self.rect.y -= 1
         if hits:
             self.vel.y = JUMPVEL
+
+    def interact(self):
+        pass
 
     def update(self):
         self.movement_controls()
@@ -99,6 +124,7 @@ class Player(pygame.sprite.Sprite):
         self.rect.y = int(self.pos.y)
         self.wall_collisions('y')
 
+#Wall class
 class Wall(pygame.sprite.Sprite):
     def __init__(self, game, x, y, colour):
         self.groups = game.all_sprites_group, game.wall_group
@@ -112,8 +138,24 @@ class Wall(pygame.sprite.Sprite):
         self.rect.x = x * TILESIZE
         self.rect.y = y * TILESIZE
 
+#Ladder class
+class Ladder(pygame.sprite.Sprite):
+    def __init__(self, game, x, y, colour):
+        self.groups = game.all_sprites_group, game.ladder_group
+        pygame.sprite.Sprite.__init__(self, self.groups)
+        self.game = game
+        self.image = pygame.Surface((TILESIZE, TILESIZE))
+        self.image.fill(colour)
+        self.rect = self.image.get_rect()
+        self.x = x
+        self.y = y
+        self.rect.x = x * TILESIZE
+        self.rect.y = y * TILESIZE
+
         
 # -- Map and Camera
+
+#Map class
 class Map():
     def __init__(self, map_path):
         self.maplist = []
@@ -124,7 +166,8 @@ class Map():
         self.tileheight = len(self.maplist)
         self.width = self.tilewidth * TILESIZE
         self.height = self.tileheight * TILESIZE
-#CameraV1
+        
+#Camera V1 - no lag
 '''
 class Camera():
     def __init__(self, width, height):
@@ -147,6 +190,7 @@ class Camera():
         y = max(-(self.height - HEIGHT), y)
         self.camera = pygame.Rect(x, y, self.width, self.height)
 '''
+#Camera class
 class Camera():
     def __init__(self, width, height):
         self.width = width
@@ -177,16 +221,27 @@ class Game():
         self.clock = pygame.time.Clock()
         pygame.key.set_repeat(100, 50)
         self.myfont = pygame.font.SysFont('Comic Sans MS', 30)
+        self.level = LEVEL
+        self.tools_reset()
 
     def sprite_group_reset(self):
         self.all_sprites_group = pygame.sprite.Group()
         self.wall_group = pygame.sprite.Group()
+        self.ladder_group = pygame.sprite.Group()
         self.player_group = pygame.sprite.Group()
 
-    def new_game(self):
+    def tools_reset(self):
+        self.show_grid = False
+        self.show_pos = False
+
+    def new_level(self):
         self.sprite_group_reset()
-        self.level = LEVEL
-        self.load_map(self.level)
+        self.level += 1
+        try:
+            self.load_map(self.level)
+        except:
+            self.level = LEVEL + 1
+            self.load_map(self.level)
         self.camera = Camera(self.map.width, self.map.height)
 
     def load_map(self, level):
@@ -199,6 +254,8 @@ class Game():
                     Wall(self, x, y, PURPLE)
                 if item == '2':
                     Wall(self, x, y, BRIGHTBLUE)
+                if item == '3':
+                    Ladder(self, x, y, YELLOW)
                 if item == 'p':
                     self.player = Player(self, x, y)
                 x += 1
@@ -218,14 +275,22 @@ class Game():
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 self.exit_game()
-            if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_ESCAPE:
-                    self.pause_game()
-                if event.key == pygame.K_p:
-                    print(self.player.pos, -self.player.rect.x - int(self.player.rect.width / 2) + int(WIDTH / 2))
+            if event.type == pygame.KEYUP:
+                if event.key == pygame.K_n:
+                    self.new_level()
+                if event.key == pygame.K_r:
+                    self.level -= 1
+                    self.new_level()
+                if event.key == pygame.K_0:
+                    self.tools_reset()
+                if event.key == pygame.K_1:
+                    self.show_grid = not self.show_grid
+                if event.key == pygame.K_2:
+                    self.show_pos = not self.show_pos
 
     def update(self):
         self.all_sprites_group.update()
+        self.player_group.update()
         self.camera.update(self.player)
 
     def blit_texts(self, texts, colour, x, y, y_intervals, font):
@@ -236,14 +301,20 @@ class Game():
             counter += 1
 
     def draw_texts(self):
-        string = 'Camera Offset x: ' + str(self.camera.x) + '\nCamera Offset y: ' + str(self.camera.y) + '\nPlayer x: ' + str(self.player.rect.x) + '\nPlayer y: ' + str(self.player.rect.y)
-        self.blit_texts(string, WHITE, 32, 32, 32, self.myfont)
+        if self.show_pos:
+            string = 'Camera Offset x: ' + str(self.camera.x) + '\nCamera Offset y: ' + str(self.camera.y) + '\nPlayer x: ' + str(self.player.rect.x) + '\nPlayer y: ' + str(self.player.rect.y)
+            self.blit_texts(string, WHITE, 32, 32, 32, self.myfont)
 
     def draw(self):
         self.screen.fill(BGCOLOUR)
-        self.show_grid_lines()
+        if self.show_grid:
+            self.show_grid_lines()
+        #self.all_sprites_group.draw(self.screen)
+        #self.player_group.draw(self.screen)
+        #all sprites draw replaced with for loop blitting individual sprites on to the screen - doing the same thing but alow camera to be applied
         for i in self.all_sprites_group:
             self.screen.blit(i.image, self.camera.apply(i))
+        self.screen.blit(self.player.image, self.camera.apply(self.player))
         self.draw_texts()
         pygame.display.flip()
 
@@ -257,7 +328,7 @@ class Game():
         pass
 
     def pause_game(self):
-        self.done = True
+        pass
             
     def exit_game(self):
         pygame.quit()
@@ -268,7 +339,7 @@ class Game():
 game = Game()
 game.home_screen()
 while True:
-    game.new_game()
+    game.new_level()
     game.game_loop()
 
 
