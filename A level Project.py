@@ -73,14 +73,18 @@ class Player(pygame.sprite.Sprite):
     def load_sprites(self):
         paths = ['images/player/idle', 'images/player/run', 'images/player/jump', 'images/player/fall']
         self.sprites = []
+        self.mirrored_sprites = []
         for path in paths:
             temp_list = []
+            temp_list2 = []
             for i in sorted(os.listdir(path)):
                 image = pygame.image.load(os.path.join(path, i))
                 size = tuple(2*x for x in image.get_size())
                 image = pygame.transform.scale(image, size)
                 temp_list.append(image)
+                temp_list2.append(pygame.transform.flip(image, True, False))
             self.sprites.append(temp_list)
+            self.mirrored_sprites.append(temp_list2)
 
     def wall_collisions(self, direction):
         hits = pygame.sprite.spritecollide(self, game.wall_group, False, collide_hit_rect)
@@ -113,8 +117,10 @@ class Player(pygame.sprite.Sprite):
         if not ladder[0]:
             if keys[pygame.K_LEFT]:
                 self.acc.x = -PLAYERACC
+                self.face_left = True
             if keys[pygame.K_RIGHT]:
                 self.acc.x = PLAYERACC
+                self.face_left = False
             if keys[pygame.K_UP]:
                 self.jump()
             if keys[pygame.K_DOWN]:
@@ -124,8 +130,10 @@ class Player(pygame.sprite.Sprite):
             self.vel.y = 0
             if keys[pygame.K_LEFT]:
                 self.acc.x = -PLAYERACC
+                self.face_left = True
             if keys[pygame.K_RIGHT]:
                 self.acc.x = PLAYERACC
+                self.face_left = False
             if keys[pygame.K_UP]:
                 self.vel.y = -LADDERVEL
             if keys[pygame.K_DOWN]:
@@ -137,12 +145,46 @@ class Player(pygame.sprite.Sprite):
         self.hit_rect.y -= 1
         if hits:
             self.vel.y = JUMPVEL
+            self.current_sprite = 0
 
     def interact(self):
         pass
 
-    def update(self):
+    def animations(self):
         now = pygame.time.get_ticks()
+        sprites_list = self.sprites
+        if self.face_left:
+            sprites_list = self.mirrored_sprites
+        if self.current_action == 0:        #idle
+            if now - self.last_sprite_time >= 200:
+                self.current_sprite += 1
+                if self.current_sprite > len(sprites_list[self.current_action])-1:
+                    self.current_sprite = 0
+                self.image = sprites_list[self.current_action][self.current_sprite]
+                self.last_sprite_time = pygame.time.get_ticks()
+        elif self.current_action == 1:      #running
+            if now - self.last_sprite_time >= 125:
+                self.current_sprite += 1
+                if self.current_sprite > len(sprites_list[self.current_action])-1:
+                    self.current_sprite = 0
+                self.image = sprites_list[self.current_action][self.current_sprite]
+                self.last_sprite_time = pygame.time.get_ticks()
+        elif self.current_action == 2:      #jumping
+            if now - self.last_sprite_time >= 100:
+                self.current_sprite += 1
+                if self.current_sprite > len(sprites_list[self.current_action])-1:
+                    self.current_sprite = len(sprites_list[self.current_action])-1
+                self.image = sprites_list[self.current_action][self.current_sprite]
+                self.last_sprite_time = pygame.time.get_ticks()
+        elif self.current_action == 3:      #falling
+            if now - self.last_sprite_time >= 150:
+                self.current_sprite += 1
+                if self.current_sprite > len(sprites_list[self.current_action])-1:
+                    self.current_sprite = 0
+                self.image = sprites_list[self.current_action][self.current_sprite]
+                self.last_sprite_time = pygame.time.get_ticks()
+
+    def update(self):
         self.movement_controls()
         self.acc.x += self.vel.x*FRICTION
         self.vel += self.acc
@@ -153,12 +195,19 @@ class Player(pygame.sprite.Sprite):
         self.hit_rect.y = int(self.pos.y)
         self.wall_collisions('y')
         self.rect.center = self.hit_rect.center
-        if now - self.last_sprite_time >= 200:
-            self.current_sprite += 1
-            if self.current_sprite > len(self.sprites)-1:
-                self.current_sprite = 0
-            self.image = self.sprites[self.current_action][self.current_sprite]
-            self.last_sprite_time = pygame.time.get_ticks()
+        if abs(self.vel.x) < 0.2:
+            self.vel.x = 0
+        if self.vel in [(0, 0), (0, 0.3)]:
+            self.current_action = 0
+        elif self.vel.y not in [0, 0.3]:
+            if self.vel.y < 0:
+                self.current_action = 2
+            else:
+                self.current_action = 3
+        else:
+            self.current_action = 1
+        self.animations()
+        
 
 #Wall class
 class Wall(pygame.sprite.Sprite):
@@ -344,7 +393,11 @@ class Game():
 
     def draw_texts(self):
         if self.show_stats:
-            string = 'Camera Offset x: ' + str(self.camera.x) + '\nCamera Offset y: ' + str(self.camera.y) + '\nPlayer x: ' + str(self.player.rect.x) + '\nPlayer y: ' + str(self.player.rect.y) + '\nFPS: ' + "{:.2f}".format(self.clock.get_fps())
+            string = 'Camera Offset x: ' + str(self.camera.x) + '\nCamera Offset y: ' + str(self.camera.y)
+            string += '\nPlayer x: ' + str(self.player.rect.x) + '\nPlayer y: ' + str(self.player.rect.y)
+            string += '\nPlayer Acc: ' + str(self.player.acc) + '\nPlayer Vel: ' + str(self.player.vel)
+            string += '\nPlayer action:' + str(self.player.current_action) + '\nPlayer sprite: ' + str(self.player.current_sprite)
+            string += '\nFPS: ' + "{:.2f}".format(self.clock.get_fps())
             self.blit_texts(string, WHITE, 32, 32, 32, self.myfont)
 
     def draw(self):
