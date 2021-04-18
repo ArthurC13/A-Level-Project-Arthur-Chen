@@ -41,6 +41,8 @@ LEVEL = 0
 CAMERALAG = 25
 
 # -- Sprites Classes
+def collide_hit_rect(a, b):
+    return a.hit_rect.colliderect(b.rect)
 
 #Player class
 class Player(pygame.sprite.Sprite):
@@ -49,44 +51,57 @@ class Player(pygame.sprite.Sprite):
         pygame.sprite.Sprite.__init__(self, self.groups)
         self.game = game
         self.load_sprites()
-        print(self.sprites)
+        self.current_action = 0
+        '''
+        Player actions:
+        0. idle
+        1. run
+        2. jump
+        3. fall
+        '''
         self.current_sprite = 0
-        self.image = self.sprites[self.current_sprite]
+        self.face_left = False
+        self.image = self.sprites[self.current_action][self.current_sprite]
         self.last_sprite_time = pygame.time.get_ticks()
         self.rect = self.image.get_rect()
+        self.hit_rect = pygame.Rect(0, 0, 32, 64)
+        self.hit_rect.center = self.rect.center
         self.pos = pygame.math.Vector2(x * TILESIZE, y * TILESIZE)
         self.vel = pygame.math.Vector2(0, 0)
         self.acc = pygame.math.Vector2(0, 0)
 
     def load_sprites(self):
-        path = 'images/player/idle'
+        paths = ['images/player/idle', 'images/player/run', 'images/player/jump', 'images/player/fall']
         self.sprites = []
-        for i in sorted(os.listdir(path)):
-            image = pygame.image.load(os.path.join(path, i))
-            size = tuple(2*x for x in image.get_size())
-            image = pygame.transform.scale(image, size)
-            self.sprites.append(image)
+        for path in paths:
+            temp_list = []
+            for i in sorted(os.listdir(path)):
+                image = pygame.image.load(os.path.join(path, i))
+                size = tuple(2*x for x in image.get_size())
+                image = pygame.transform.scale(image, size)
+                temp_list.append(image)
+            self.sprites.append(temp_list)
 
     def wall_collisions(self, direction):
-        hits = pygame.sprite.spritecollide(self, game.wall_group, False)
+        hits = pygame.sprite.spritecollide(self, game.wall_group, False, collide_hit_rect)
         if hits:
             if direction == 'x':
                 if self.vel.x > 0:
-                    self.pos.x = hits[0].rect.left - self.rect.width
+                    self.pos.x = hits[0].rect.left - self.hit_rect.width
                 elif self.vel.x < 0:
                     self.pos.x = hits[0].rect.right
                 self.vel.x = 0
-                self.rect.x = int(self.pos.x)
+                self.hit_rect.x = int(self.pos.x)
             if direction == 'y':
                 if self.vel.y > 0:
-                    self.pos.y = hits[0].rect.top - self.rect.height
+                    self.pos.y = hits[0].rect.top - self.hit_rect.height
                 elif self.vel.y < 0:
                     self.pos.y = hits[0].rect.bottom
                 self.vel.y = 0
-                self.rect.y = int(self.pos.y)
+                self.hit_rect.y = int(self.pos.y)
 
     def on_ladder(self):
-        hits = pygame.sprite.spritecollide(self, game.ladder_group, False)
+        hits = pygame.sprite.spritecollide(self, game.ladder_group, False, collide_hit_rect)
         if hits:
             return [True, hits[0].rect.left]
         return [False]
@@ -117,9 +132,9 @@ class Player(pygame.sprite.Sprite):
                 self.vel.y = LADDERVEL
 
     def jump(self):
-        self.rect.y += 1
-        hits = pygame.sprite.spritecollide(self, game.wall_group, False)
-        self.rect.y -= 1
+        self.hit_rect.y += 1
+        hits = pygame.sprite.spritecollide(self, game.wall_group, False, collide_hit_rect)
+        self.hit_rect.y -= 1
         if hits:
             self.vel.y = JUMPVEL
 
@@ -133,15 +148,16 @@ class Player(pygame.sprite.Sprite):
         self.vel += self.acc
         self.vel.y = min(self.vel.y, 15)        #termial velocity
         self.pos += self.vel + 0.5 * self.acc
-        self.rect.x = int(self.pos.x)
+        self.hit_rect.x = int(self.pos.x)
         self.wall_collisions('x')
-        self.rect.y = int(self.pos.y)
+        self.hit_rect.y = int(self.pos.y)
         self.wall_collisions('y')
+        self.rect.center = self.hit_rect.center
         if now - self.last_sprite_time >= 200:
             self.current_sprite += 1
             if self.current_sprite > len(self.sprites)-1:
                 self.current_sprite = 0
-            self.image = self.sprites[self.current_sprite]
+            self.image = self.sprites[self.current_action][self.current_sprite]
             self.last_sprite_time = pygame.time.get_ticks()
 
 #Wall class
@@ -221,6 +237,9 @@ class Camera():
     def apply(self, entity):
         return entity.rect.move(-self.x, -self.y)
 
+    def apply_rect(self, rect):
+        return rect.move(-self.x, -self.y)
+
     def update(self, target):
         self.x += (target.rect.x - self.x + target.rect.width // 2 - WIDTH//2)//CAMERALAG
         self.y += (target.rect.y - self.y + target.rect.height // 2 - HEIGHT//2)//CAMERALAG
@@ -252,7 +271,8 @@ class Game():
 
     def tools_reset(self):
         self.show_grid = False
-        self.show_pos = False
+        self.show_stats = False
+        self.show_hit_rect = False
 
     def new_level(self):
         self.sprite_group_reset()
@@ -306,7 +326,9 @@ class Game():
                 if event.key == pygame.K_1:
                     self.show_grid = not self.show_grid
                 if event.key == pygame.K_2:
-                    self.show_pos = not self.show_pos
+                    self.show_stats = not self.show_stats
+                if event.key == pygame.K_3:
+                    self.show_hit_rect = not self.show_hit_rect
 
     def update(self):
         self.all_sprites_group.update()
@@ -321,8 +343,8 @@ class Game():
             counter += 1
 
     def draw_texts(self):
-        if self.show_pos:
-            string = 'Camera Offset x: ' + str(self.camera.x) + '\nCamera Offset y: ' + str(self.camera.y) + '\nPlayer x: ' + str(self.player.rect.x) + '\nPlayer y: ' + str(self.player.rect.y)
+        if self.show_stats:
+            string = 'Camera Offset x: ' + str(self.camera.x) + '\nCamera Offset y: ' + str(self.camera.y) + '\nPlayer x: ' + str(self.player.rect.x) + '\nPlayer y: ' + str(self.player.rect.y) + '\nFPS: ' + "{:.2f}".format(self.clock.get_fps())
             self.blit_texts(string, WHITE, 32, 32, 32, self.myfont)
 
     def draw(self):
@@ -335,6 +357,8 @@ class Game():
         for i in self.all_sprites_group:
             self.screen.blit(i.image, self.camera.apply(i))
         self.screen.blit(self.player.image, self.camera.apply(self.player))
+        if self.show_hit_rect:
+            pygame.draw.rect(self.screen, LIGHTBLUE, self.camera.apply_rect(self.player.hit_rect), 2)
         self.draw_texts()
         pygame.display.flip()
 
