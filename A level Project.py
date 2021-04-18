@@ -44,13 +44,47 @@ CAMERALAG = 25
 def collide_hit_rect(a, b):
     return a.hit_rect.colliderect(b.rect)
 
+def load_sprites(paths):
+    sprites = []
+    mirrored_sprites = []
+    for path in paths:
+        temp_list = []
+        temp_list2 = []
+        for i in sorted(os.listdir(path)):
+            image = pygame.image.load(os.path.join(path, i))
+            size = tuple(2*x for x in image.get_size())
+            image = pygame.transform.scale(image, size)
+            temp_list.append(image)
+            temp_list2.append(pygame.transform.flip(image, True, False))
+        sprites.append(temp_list)
+        mirrored_sprites.append(temp_list2)
+    return sprites, mirrored_sprites
+
+def wall_collisions(sprite, direction):
+    hits = pygame.sprite.spritecollide(sprite, game.wall_group, False, collide_hit_rect)
+    if hits:
+        if direction == 'x':
+            if sprite.vel.x > 0:
+                sprite.pos.x = hits[0].rect.left - sprite.hit_rect.width
+            elif sprite.vel.x < 0:
+                sprite.pos.x = hits[0].rect.right
+            sprite.vel.x = 0
+            sprite.hit_rect.x = int(sprite.pos.x)
+        if direction == 'y':
+            if sprite.vel.y > 0:
+                sprite.pos.y = hits[0].rect.top - sprite.hit_rect.height
+            elif sprite.vel.y < 0:
+                sprite.pos.y = hits[0].rect.bottom
+            sprite.vel.y = 0
+            sprite.hit_rect.y = int(sprite.pos.y)
+
 #Player class
 class Player(pygame.sprite.Sprite):
     def __init__(self, game, x, y):
         self.groups = game.player_group
         pygame.sprite.Sprite.__init__(self, self.groups)
         self.game = game
-        self.load_sprites()
+        self.sprites, self.mirrored_sprites = load_sprites(['images/player/idle', 'images/player/run', 'images/player/jump', 'images/player/fall'])
         self.current_action = 0
         '''
         Player actions:
@@ -64,45 +98,11 @@ class Player(pygame.sprite.Sprite):
         self.image = self.sprites[self.current_action][self.current_sprite]
         self.last_sprite_time = pygame.time.get_ticks()
         self.rect = self.image.get_rect()
-        self.hit_rect = pygame.Rect(0, 0, 32, 64)
+        self.hit_rect = pygame.Rect(0, 0, 30, 62)
         self.hit_rect.center = self.rect.center
         self.pos = pygame.math.Vector2(x * TILESIZE, y * TILESIZE)
         self.vel = pygame.math.Vector2(0, 0)
         self.acc = pygame.math.Vector2(0, 0)
-
-    def load_sprites(self):
-        paths = ['images/player/idle', 'images/player/run', 'images/player/jump', 'images/player/fall']
-        self.sprites = []
-        self.mirrored_sprites = []
-        for path in paths:
-            temp_list = []
-            temp_list2 = []
-            for i in sorted(os.listdir(path)):
-                image = pygame.image.load(os.path.join(path, i))
-                size = tuple(2*x for x in image.get_size())
-                image = pygame.transform.scale(image, size)
-                temp_list.append(image)
-                temp_list2.append(pygame.transform.flip(image, True, False))
-            self.sprites.append(temp_list)
-            self.mirrored_sprites.append(temp_list2)
-
-    def wall_collisions(self, direction):
-        hits = pygame.sprite.spritecollide(self, game.wall_group, False, collide_hit_rect)
-        if hits:
-            if direction == 'x':
-                if self.vel.x > 0:
-                    self.pos.x = hits[0].rect.left - self.hit_rect.width
-                elif self.vel.x < 0:
-                    self.pos.x = hits[0].rect.right
-                self.vel.x = 0
-                self.hit_rect.x = int(self.pos.x)
-            if direction == 'y':
-                if self.vel.y > 0:
-                    self.pos.y = hits[0].rect.top - self.hit_rect.height
-                elif self.vel.y < 0:
-                    self.pos.y = hits[0].rect.bottom
-                self.vel.y = 0
-                self.hit_rect.y = int(self.pos.y)
 
     def on_ladder(self):
         hits = pygame.sprite.spritecollide(self, game.ladder_group, False, collide_hit_rect)
@@ -191,9 +191,9 @@ class Player(pygame.sprite.Sprite):
         self.vel.y = min(self.vel.y, 15)        #termial velocity
         self.pos += self.vel + 0.5 * self.acc
         self.hit_rect.x = int(self.pos.x)
-        self.wall_collisions('x')
+        wall_collisions(self, 'x')
         self.hit_rect.y = int(self.pos.y)
-        self.wall_collisions('y')
+        wall_collisions(self, 'y')
         self.rect.center = self.hit_rect.center
         if abs(self.vel.x) < 0.2:
             self.vel.x = 0
@@ -207,6 +207,52 @@ class Player(pygame.sprite.Sprite):
         else:
             self.current_action = 1
         self.animations()
+
+#Enemies
+        
+#Slime calss
+class Slime(pygame.sprite.Sprite):
+    def __init__(self, game, x, y):
+        self.groups = game.enemy_group
+        pygame.sprite.Sprite.__init__(self, self.groups)
+        self.game = game
+        self.sprites, self.mirrored_sprites = load_sprites(['images/mobs/slime/idle', 'images/mobs/slime/move'])
+        self.current_action = 0
+        '''
+        Slime actions:
+        0. idle
+        1. move
+        '''
+        self.current_sprite = 0
+        self.face_left = False
+        self.image = self.sprites[self.current_action][self.current_sprite]
+        self.last_sprite_time = pygame.time.get_ticks()
+        self.rect = self.image.get_rect()
+        self.hit_rect = pygame.Rect(0, 0, 32, 32)
+        self.hit_rect.center = self.rect.center
+        self.pos = pygame.math.Vector2(x * TILESIZE, y * TILESIZE)
+        self.vel = pygame.math.Vector2(0, 0)
+        self.acc = pygame.math.Vector2(0, 0)
+
+    def movements(self):
+        self.acc = pygame.math.Vector2(0, GRAVITY)
+        if abs(self.pos.x - game.player.pos.x) < 100:
+            if self.pos.x > game.player.pos.x:
+                self.acc.x = -0.2
+            else:
+                self.acc.x = 0.2
+
+    def update(self):
+        self.movements()
+        self.acc.x += self.vel.x*FRICTION
+        self.vel += self.acc
+        self.vel.y = min(self.vel.y, 15)        #termial velocity
+        self.pos += self.vel + 0.5 * self.acc
+        self.hit_rect.x = int(self.pos.x)
+        wall_collisions(self, 'x')
+        self.hit_rect.y = int(self.pos.y)
+        wall_collisions(self, 'y')
+        self.rect.center = self.hit_rect.center
         
 
 #Wall class
@@ -252,29 +298,6 @@ class Map():
         self.width = self.tilewidth * TILESIZE
         self.height = self.tileheight * TILESIZE
         
-#Camera V1 - no lag
-'''
-class Camera():
-    def __init__(self, width, height):
-        self.camera = pygame.Rect(0, 0, width, height)
-        self.width = width
-        self.height = height
-        self.x = 0
-        self.y = 0
-
-    def apply(self, entity):
-        return entity.rect.move(self.camera.topleft)
-
-    def update(self, target):
-        x = -target.rect.x - int(target.rect.width / 2) + int(WIDTH / 2)
-        y = -target.rect.y + int(HEIGHT / 4*3)
-
-        x = min(0, x)
-        y = min(0, y)
-        x = max(-(self.width - WIDTH), x)
-        y = max(-(self.height - HEIGHT), y)
-        self.camera = pygame.Rect(x, y, self.width, self.height)
-'''
 #Camera class
 class Camera():
     def __init__(self, width, height):
@@ -316,12 +339,13 @@ class Game():
         self.all_sprites_group = pygame.sprite.Group()
         self.wall_group = pygame.sprite.Group()
         self.ladder_group = pygame.sprite.Group()
+        self.enemy_group = pygame.sprite.Group()
         self.player_group = pygame.sprite.Group()
 
     def tools_reset(self):
         self.show_grid = False
-        self.show_stats = False
-        self.show_hit_rect = False
+        self.show_stats = True
+        self.show_hit_rect = True
 
     def new_level(self):
         self.sprite_group_reset()
@@ -347,6 +371,8 @@ class Game():
                     Ladder(self, x, y, YELLOW)
                 if item == 'p':
                     self.player = Player(self, x, y)
+                if item == 's':
+                    Slime(self, x, y)
                 x += 1
             x = 0
             y += 1
@@ -354,7 +380,7 @@ class Game():
     def game_loop(self):
         self.done = False
         while not self.done:
-            self.clock.tick(FPS)
+            self.dt = self.clock.tick(FPS)/1000
             self.events()
             self.update()
             self.draw()
@@ -381,6 +407,7 @@ class Game():
 
     def update(self):
         self.all_sprites_group.update()
+        self.enemy_group.update()
         self.player_group.update()
         self.camera.update(self.player)
 
@@ -409,9 +436,13 @@ class Game():
         #all sprites draw replaced with for loop blitting individual sprites on to the screen - doing the same thing but alow camera to be applied
         for i in self.all_sprites_group:
             self.screen.blit(i.image, self.camera.apply(i))
+        for i in self.enemy_group:
+            self.screen.blit(i.image, self.camera.apply(i))
         self.screen.blit(self.player.image, self.camera.apply(self.player))
         if self.show_hit_rect:
             pygame.draw.rect(self.screen, LIGHTBLUE, self.camera.apply_rect(self.player.hit_rect), 2)
+            for i in self.enemy_group:
+                pygame.draw.rect(self.screen, LIGHTBLUE, self.camera.apply_rect(i.hit_rect), 2)
         self.draw_texts()
         pygame.display.flip()
 
