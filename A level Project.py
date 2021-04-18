@@ -236,11 +236,33 @@ class Slime(pygame.sprite.Sprite):
 
     def movements(self):
         self.acc = pygame.math.Vector2(0, GRAVITY)
-        if abs(self.pos.x - game.player.pos.x) < 100:
+        if abs(self.pos.x - game.player.pos.x) < 300:
             if self.pos.x > game.player.pos.x:
                 self.acc.x = -0.2
+                self.face_left = False
             else:
                 self.acc.x = 0.2
+                self.face_left = True
+
+    def animations(self):
+        now = pygame.time.get_ticks()
+        sprites_list = self.sprites
+        if self.face_left:
+            sprites_list = self.mirrored_sprites
+        if self.current_action == 0:        #idle
+            if now - self.last_sprite_time >= 200:
+                self.current_sprite += 1
+                if self.current_sprite > len(sprites_list[self.current_action])-1:
+                    self.current_sprite = 0
+                self.image = sprites_list[self.current_action][self.current_sprite]
+                self.last_sprite_time = pygame.time.get_ticks()
+        elif self.current_action == 1:      #moving
+            if now - self.last_sprite_time >= 125:
+                self.current_sprite += 1
+                if self.current_sprite > len(sprites_list[self.current_action])-1:
+                    self.current_sprite = 0
+                self.image = sprites_list[self.current_action][self.current_sprite]
+                self.last_sprite_time = pygame.time.get_ticks()
 
     def update(self):
         self.movements()
@@ -253,6 +275,14 @@ class Slime(pygame.sprite.Sprite):
         self.hit_rect.y = int(self.pos.y)
         wall_collisions(self, 'y')
         self.rect.center = self.hit_rect.center
+        if abs(self.vel.x) < 0.2:
+            self.vel.x = 0
+        if self.vel in [(0, 0), (0, 0.3)]:
+            self.current_action = 0
+        else:
+            self.current_action = 1
+        self.animations()
+        
         
 
 #Wall class
@@ -344,8 +374,8 @@ class Game():
 
     def tools_reset(self):
         self.show_grid = False
-        self.show_stats = True
-        self.show_hit_rect = True
+        self.show_stats = False
+        self.show_hit_rect = False
 
     def new_level(self):
         self.sprite_group_reset()
