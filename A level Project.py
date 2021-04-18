@@ -1,5 +1,6 @@
 import pygame
 import random
+import os
 import sys
 
 # -- Global Constants
@@ -47,12 +48,24 @@ class Player(pygame.sprite.Sprite):
         self.groups = game.player_group
         pygame.sprite.Sprite.__init__(self, self.groups)
         self.game = game
-        self.image = pygame.Surface((TILESIZE, TILESIZE))
-        self.image.fill(BLUE)
+        self.load_sprites()
+        print(self.sprites)
+        self.current_sprite = 0
+        self.image = self.sprites[self.current_sprite]
+        self.last_sprite_time = pygame.time.get_ticks()
         self.rect = self.image.get_rect()
         self.pos = pygame.math.Vector2(x * TILESIZE, y * TILESIZE)
         self.vel = pygame.math.Vector2(0, 0)
         self.acc = pygame.math.Vector2(0, 0)
+
+    def load_sprites(self):
+        path = 'images/player/idle'
+        self.sprites = []
+        for i in sorted(os.listdir(path)):
+            image = pygame.image.load(os.path.join(path, i))
+            size = tuple(2*x for x in image.get_size())
+            image = pygame.transform.scale(image, size)
+            self.sprites.append(image)
 
     def wall_collisions(self, direction):
         hits = pygame.sprite.spritecollide(self, game.wall_group, False)
@@ -114,6 +127,7 @@ class Player(pygame.sprite.Sprite):
         pass
 
     def update(self):
+        now = pygame.time.get_ticks()
         self.movement_controls()
         self.acc.x += self.vel.x*FRICTION
         self.vel += self.acc
@@ -123,6 +137,12 @@ class Player(pygame.sprite.Sprite):
         self.wall_collisions('x')
         self.rect.y = int(self.pos.y)
         self.wall_collisions('y')
+        if now - self.last_sprite_time >= 200:
+            self.current_sprite += 1
+            if self.current_sprite > len(self.sprites)-1:
+                self.current_sprite = 0
+            self.image = self.sprites[self.current_sprite]
+            self.last_sprite_time = pygame.time.get_ticks()
 
 #Wall class
 class Wall(pygame.sprite.Sprite):
