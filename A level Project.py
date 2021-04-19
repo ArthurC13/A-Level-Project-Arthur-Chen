@@ -51,6 +51,7 @@ def load_sprites(paths):
         temp_list = []
         temp_list2 = []
         for i in sorted(os.listdir(path)):
+            print(os.path.join(path, i))
             image = pygame.image.load(os.path.join(path, i))
             size = tuple(2*x for x in image.get_size())
             image = pygame.transform.scale(image, size)
@@ -84,7 +85,7 @@ class Player(pygame.sprite.Sprite):
         self.groups = game.player_group
         pygame.sprite.Sprite.__init__(self, self.groups)
         self.game = game
-        self.sprites, self.mirrored_sprites = load_sprites(['images/player/idle', 'images/player/run', 'images/player/jump', 'images/player/fall'])
+        self.sprites, self.mirrored_sprites = load_sprites(['images/player/idle', 'images/player/run', 'images/player/jump', 'images/player/fall', 'images/player/attack'])
         self.current_action = 0
         '''
         Player actions:
@@ -92,6 +93,7 @@ class Player(pygame.sprite.Sprite):
         1. run
         2. jump
         3. fall
+        4. attack
         '''
         self.current_sprite = 0
         self.face_left = False
@@ -104,6 +106,8 @@ class Player(pygame.sprite.Sprite):
         self.vel = pygame.math.Vector2(0, 0)
         self.acc = pygame.math.Vector2(0, 0)
         self.health = health
+        self.last_attack = pygame.time.get_ticks()
+        self.attack_cooldown = 2000
 
     def on_ladder(self):
         hits = pygame.sprite.spritecollide(self, game.ladder_group, False, collide_hit_rect)
@@ -115,40 +119,55 @@ class Player(pygame.sprite.Sprite):
         self.acc = pygame.math.Vector2(0, GRAVITY)
         ladder = self.on_ladder()
         keys = pygame.key.get_pressed()
-        if not ladder[0]:
-            if keys[pygame.K_LEFT]:
-                self.acc.x = -PLAYERACC
-                self.face_left = True
-            if keys[pygame.K_RIGHT]:
-                self.acc.x = PLAYERACC
-                self.face_left = False
-            if keys[pygame.K_UP]:
-                self.jump()
-            if keys[pygame.K_DOWN]:
-                self.interact()
-        else:
-            self.acc.y = 0
-            self.vel.y = 0
-            if keys[pygame.K_LEFT]:
-                self.acc.x = -PLAYERACC
-                self.face_left = True
-            if keys[pygame.K_RIGHT]:
-                self.acc.x = PLAYERACC
-                self.face_left = False
-            if keys[pygame.K_UP]:
-                self.vel.y = -LADDERVEL
-            if keys[pygame.K_DOWN]:
-                self.vel.y = LADDERVEL
+        if self.current_action != 4:
+            if not ladder[0]:
+                if keys[pygame.K_LEFT]:
+                    self.acc.x = -PLAYERACC
+                    self.face_left = True
+                if keys[pygame.K_RIGHT]:
+                    self.acc.x = PLAYERACC
+                    self.face_left = False
+                if keys[pygame.K_UP]:
+                    self.jump()
+                if keys[pygame.K_DOWN]:
+                    self.interact()
+                if keys[pygame.K_z]:
+                    self.attack()
+            else:
+                self.acc.y = 0
+                self.vel.y = 0
+                if keys[pygame.K_LEFT]:
+                    self.acc.x = -PLAYERACC
+                    self.face_left = True
+                if keys[pygame.K_RIGHT]:
+                    self.acc.x = PLAYERACC
+                    self.face_left = False
+                if keys[pygame.K_UP]:
+                    self.vel.y = -LADDERVEL
+                if keys[pygame.K_DOWN]:
+                    self.vel.y = LADDERVEL
 
-    def jump(self):
+    def on_floor(self):
         self.hit_rect.y += 1
         hits = pygame.sprite.spritecollide(self, game.wall_group, False, collide_hit_rect)
-        self.hit_rect.y -= 2
+        self.hit_rect.y -= 1
+        return hits
+
+    def jump(self):
+        hits = self.on_floor()
+        self.hit_rect.y -= 1
         hits2 = pygame.sprite.spritecollide(self, game.wall_group, False, collide_hit_rect)
         self.hit_rect.y += 1
         if hits and not hits2:
             self.vel.y = JUMPVEL
-            self.current_sprite = 0
+            self.current_sprite = -1
+
+    def attack(self):
+        now = pygame.time.get_ticks()
+        if now - self.last_attack >= self.attack_cooldown and self.on_floor():
+            self.last_attack = pygame.time.get_ticks()
+            self.current_action = 4
+            self.current_sprite = -1
 
     def interact(self):
         pass
@@ -173,7 +192,7 @@ class Player(pygame.sprite.Sprite):
                 self.image = sprites_list[self.current_action][self.current_sprite]
                 self.last_sprite_time = pygame.time.get_ticks()
         elif self.current_action == 2:      #jumping
-            if now - self.last_sprite_time >= 100:
+            if now - self.last_sprite_time >= 80:
                 self.current_sprite += 1
                 if self.current_sprite > len(sprites_list[self.current_action])-1:
                     self.current_sprite = len(sprites_list[self.current_action])-1
@@ -184,6 +203,14 @@ class Player(pygame.sprite.Sprite):
                 self.current_sprite += 1
                 if self.current_sprite > len(sprites_list[self.current_action])-1:
                     self.current_sprite = 0
+                self.image = sprites_list[self.current_action][self.current_sprite]
+                self.last_sprite_time = pygame.time.get_ticks()
+        elif self.current_action == 4:      #attacking
+            if now - self.last_sprite_time >= 80:
+                self.current_sprite += 1
+                if self.current_sprite > len(sprites_list[self.current_action])-1:
+                    self.current_sprite = 0
+                    self.current_action = 0
                 self.image = sprites_list[self.current_action][self.current_sprite]
                 self.last_sprite_time = pygame.time.get_ticks()
 
@@ -200,15 +227,16 @@ class Player(pygame.sprite.Sprite):
         self.rect.center = self.hit_rect.center
         if abs(self.vel.x) < 0.2:
             self.vel.x = 0
-        if self.vel in [(0, 0), (0, 0.3)]:
-            self.current_action = 0
-        elif self.vel.y not in [0, 0.3]:
-            if self.vel.y < 0:
-                self.current_action = 2
+        if self.current_action != 4:
+            if self.vel in [(0, 0), (0, 0.3)]:
+                self.current_action = 0
+            elif self.vel.y not in [0, 0.3]:
+                if self.vel.y < 0:
+                    self.current_action = 2
+                else:
+                    self.current_action = 3
             else:
-                self.current_action = 3
-        else:
-            self.current_action = 1
+                self.current_action = 1
         self.animations()
 
 #Enemies
