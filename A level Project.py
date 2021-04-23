@@ -369,6 +369,16 @@ class Slime(pygame.sprite.Sprite):
         self.current_action = 4
         self.current_sprite = -1
 
+    def avoid_stack(self):
+        for i in self.game.enemy_group:
+            if i != self:
+                distance = self.pos.x - i.pos.x
+                if abs(distance) < 30 and abs(self.pos.y - i.pos.y) < 30:
+                    if distance < 0:
+                        self.acc.x -= 2
+                    else:
+                        self.acc.x += 2
+
     def animations(self):
         now = pygame.time.get_ticks()
         sprites_list = self.sprites
@@ -418,6 +428,7 @@ class Slime(pygame.sprite.Sprite):
 
     def update(self):
         self.movements()
+        self.avoid_stack()
         self.acc.x += self.vel.x*FRICTION
         self.vel += self.acc
         self.vel.y = min(self.vel.y, 15)        #termial velocity
@@ -485,7 +496,7 @@ class Melee_attack(pygame.sprite.Sprite):
         self.rect.center = self.hit_rect.center
         self.target = target
         self.spawn_time = pygame.time.get_ticks()
-        self.life_time = 100
+        self.life_time = 125
         self.pos = pygame.math.Vector2(x, y)
         self.direction = direction
 
@@ -653,7 +664,7 @@ class Game():
             string += '\nPlayer x: ' + str(self.player.rect.x) + '\nPlayer y: ' + str(self.player.rect.y)
             string += '\nPlayer Acc: ' + str(self.player.acc) + '\nPlayer Vel: ' + str(self.player.vel)
             string += '\nFPS: ' + "{:.2f}".format(self.clock.get_fps())
-            self.blit_texts(string, WHITE, 32, 32, 32, self.myfont)
+            self.blit_texts(string, WHITE, 640, 32, 32, self.myfont)
 
     def draw(self):
         self.screen.fill(BGCOLOUR)
