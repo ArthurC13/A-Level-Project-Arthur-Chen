@@ -81,6 +81,12 @@ def wall_collisions(sprite, direction):
             sprite.vel.y = 0
             sprite.hit_rect.y = int(sprite.pos.y)
 
+def on_floor(a):
+    a.hit_rect.y += 1
+    hits = pygame.sprite.spritecollide(a, game.wall_group, False, collide_hit_rect)
+    a.hit_rect.y -= 1
+    return hits
+
 #Player class
 class Player(pygame.sprite.Sprite):
     def __init__(self, game, x, y, health):
@@ -139,7 +145,7 @@ class Player(pygame.sprite.Sprite):
             if keys[pygame.K_z]:
                 now = pygame.time.get_ticks()
                 if now - self.last_attack >= self.attack_cooldown:
-                    if self.on_floor():
+                    if on_floor(self):
                         self.last_attack = pygame.time.get_ticks()
                         self.current_action = 4
                         self.current_sprite = -1
@@ -160,15 +166,9 @@ class Player(pygame.sprite.Sprite):
                 self.vel.y = -LADDERVEL
             if keys[pygame.K_DOWN]:
                 self.vel.y = LADDERVEL
-
-    def on_floor(self):
-        self.hit_rect.y += 1
-        hits = pygame.sprite.spritecollide(self, game.wall_group, False, collide_hit_rect)
-        self.hit_rect.y -= 1
-        return hits
-
+                
     def jump(self):
-        hits = self.on_floor()
+        hits = on_floor(self)
         self.hit_rect.y -= 1
         hits2 = pygame.sprite.spritecollide(self, game.wall_group, False, collide_hit_rect)
         self.hit_rect.y += 1
@@ -199,7 +199,9 @@ class Player(pygame.sprite.Sprite):
             Melee_attack(self.game, int(self.pos.x)-20, int(self.pos.y)+8, 50, 28, self.game.enemy_group, 'r')
 
     def interact(self):
-        pass
+        hits = pygame.sprite.spritecollide(self, game.portal_group, False, collide_hit_rect)
+        if hits:
+            self.game.next_level()
 
     def hurt(self):
         self.current_action = 5
@@ -267,7 +269,7 @@ class Player(pygame.sprite.Sprite):
                 if self.current_sprite > len(sprites_list[self.current_action])-1:
                     self.current_sprite = len(sprites_list[self.current_action])-1
                     self.kill()
-                    self.game.done = True
+                    self.game.game_over()
                 self.image = sprites_list[self.current_action][self.current_sprite]
                 self.last_sprite_time = pygame.time.get_ticks()
         elif self.current_action == 7:      #air attacking
@@ -345,14 +347,13 @@ class Slime(pygame.sprite.Sprite):
         now = pygame.time.get_ticks()
         self.acc = pygame.math.Vector2(0, GRAVITY)
         if self.current_action != 2 and now - self.last_attack >= self.attack_rate:
-            self.face_left = False
-            if self.pos.x < game.player.pos.x:
-                self.face_left = True
             if 40 < abs(self.pos.x - game.player.pos.x) < 400 and abs(self.pos.y - game.player.pos.y) < 125:
                 if self.pos.x > game.player.pos.x:
                     self.acc.x = -0.2
+                    self.face_left = False
                 else:
                     self.acc.x = 0.2
+                    self.face_left = True
             if 40 > abs(self.pos.x - game.player.pos.x) and abs(self.pos.y - game.player.pos.y) < 60:
                 self.acc.x = 0
                 self.current_action = 2
@@ -374,10 +375,11 @@ class Slime(pygame.sprite.Sprite):
             if i != self:
                 distance = self.pos.x - i.pos.x
                 if abs(distance) < 30 and abs(self.pos.y - i.pos.y) < 30:
-                    if distance < 0:
-                        self.acc.x -= 2
-                    else:
-                        self.acc.x += 2
+                    if on_floor(i):
+                        if distance < 0:
+                            self.acc.x -= 1
+                        else:
+                            self.acc.x += 1
 
     def animations(self):
         now = pygame.time.get_ticks()
@@ -428,7 +430,8 @@ class Slime(pygame.sprite.Sprite):
 
     def update(self):
         self.movements()
-        self.avoid_stack()
+        if self.current_action != 4:
+            self.avoid_stack()
         self.acc.x += self.vel.x*FRICTION
         self.vel += self.acc
         self.vel.y = min(self.vel.y, 15)        #termial velocity
@@ -480,6 +483,19 @@ class Ladder(pygame.sprite.Sprite):
         self.rect.x = x * TILESIZE
         self.rect.y = y * TILESIZE
 
+class Portal(pygame.sprite.Sprite):
+    def __init__(self, game, x, y, colour):
+        self.groups = game.all_sprites_group, game.portal_group
+        pygame.sprite.Sprite.__init__(self, self.groups)
+        self.game = game
+        self.image = pygame.Surface((TILESIZE, TILESIZE))
+        self.image.fill(colour)
+        self.rect = self.image.get_rect()
+        self.x = x
+        self.y = y
+        self.rect.x = x * TILESIZE
+        self.rect.y = y * TILESIZE
+
 # -- Utility classes
 
 #Melee attack class
@@ -507,13 +523,14 @@ class Melee_attack(pygame.sprite.Sprite):
         hits = pygame.sprite.spritecollide(self, self.target, False, collide_hit_rect)
         if hits:
             for i in hits:
-                i.health -= 1
-                if self.direction == 'l':
-                    i.vel.x = KNOCKBACK
-                    i.hurt()
-                else:
-                    i.vel.x = -KNOCKBACK
-                    i.hurt()
+                if i.health > 0:
+                    i.health -= 1
+                    if self.direction == 'l':
+                        i.vel.x = KNOCKBACK
+                        i.hurt()
+                    else:
+                        i.vel.x = -KNOCKBACK
+                        i.hurt()
             self.kill()
         
 # -- Map and Camera
@@ -570,6 +587,7 @@ class Game():
         self.all_sprites_group = pygame.sprite.Group()
         self.wall_group = pygame.sprite.Group()
         self.ladder_group = pygame.sprite.Group()
+        self.portal_group = pygame.sprite.Group()
         self.enemy_group = pygame.sprite.Group()
         self.player_group = pygame.sprite.Group()
         self.melee_attack_group = pygame.sprite.Group()
@@ -582,9 +600,9 @@ class Game():
     def new_game(self):
         self.level = LEVEL
         self.player_health = HEALTH
-        self.new_level()
+        self.next_level()
         
-    def new_level(self):
+    def next_level(self):
         self.sprite_group_reset()
         self.level += 1
         try:
@@ -608,6 +626,8 @@ class Game():
                     Ladder(self, x, y, YELLOW)
                 if item == 'p':
                     self.player = Player(self, x, y, self.player_health)
+                if item == 'd':
+                    Portal(self, x, y, GREEN)
                 if item == 's':
                     Slime(self, x, y)
                 x += 1
@@ -616,11 +636,26 @@ class Game():
 
     def game_loop(self):
         self.done = False
+        self.mode = 'in game'
         while not self.done:
             self.dt = self.clock.tick(FPS)/1000
             self.events()
             self.update()
             self.draw()
+            
+    def wait_loop(self):
+        self.wait = True
+        if self.mode == 'pause':
+            while self.wait:
+                self.dt = self.clock.tick(FPS)/1000
+                self.events()
+                self.draw()
+        elif self.mode == 'death screen':
+            while self.wait:
+                self.dt = self.clock.tick(FPS)/1000
+                self.events()
+                self.draw()
+            self.new_game()
 
     def events(self):
         # -- User input and controls
@@ -628,11 +663,6 @@ class Game():
             if event.type == pygame.QUIT:
                 self.exit_game()
             if event.type == pygame.KEYUP:
-                if event.key == pygame.K_n:
-                    self.new_level()
-                if event.key == pygame.K_r:
-                    self.level -= 1
-                    self.new_level()
                 if event.key == pygame.K_0:
                     self.tools_reset()
                 if event.key == pygame.K_1:
@@ -641,6 +671,19 @@ class Game():
                     self.show_stats = not self.show_stats
                 if event.key == pygame.K_3:
                     self.show_hit_rect = not self.show_hit_rect
+                if self.mode == 'in game':
+                    if event.key == pygame.K_n:
+                        self.next_level()
+                    if event.key == pygame.K_r:
+                        self.level -= 1
+                        self.next_level()
+                    if event.key == pygame.K_ESCAPE:
+                        self.pause_game()
+                elif self.mode == 'pause':
+                    if event.key == pygame.K_ESCAPE:
+                        self.pause_game()
+                elif self.mode == 'death screen':
+                    self.wait = False
 
     def update(self):
         self.all_sprites_group.update()
@@ -694,8 +737,14 @@ class Game():
     def home_screen(self):
         pass
 
+    def game_over(self):
+        self.done = True
+        self.mode = 'death screen'
+
     def pause_game(self):
-        pass
+        self.done = not self.done
+        self.wait = False
+        self.mode = 'pause'
             
     def exit_game(self):
         pygame.quit()
@@ -703,34 +752,13 @@ class Game():
 
 
 ### -- Game Loop
+run = True
 game = Game()
 game.home_screen()
-while True:
-    game.new_game()
+game.new_game()
+while run:
     game.game_loop()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    game.wait_loop()
 
 
 
