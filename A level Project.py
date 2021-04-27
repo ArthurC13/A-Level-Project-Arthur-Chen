@@ -278,8 +278,12 @@ class Player(pygame.sprite.Sprite):
                 if self.current_sprite == 1:
                     self.air_attack()
                 if self.current_sprite > len(sprites_list[self.current_action])-1:
-                    self.current_sprite = 0
-                    self.current_action = 0
+                    if self.vel.y > 0:
+                        self.current_action = 3
+                        self.current_sprite = 1
+                    else:
+                        self.current_action = 2
+                        self.current_sprite = 3
                 self.image = sprites_list[self.current_action][self.current_sprite]
                 self.last_sprite_time = pygame.time.get_ticks()
 
@@ -580,7 +584,7 @@ class Game():
         pygame.display.set_caption(GAMETITLE)
         self.clock = pygame.time.Clock()
         pygame.key.set_repeat(100, 50)
-        self.myfont = pygame.font.SysFont('Comic Sans MS', 30)
+        self.myfont = pygame.font.Font('fonts/m5x7.ttf', 30)
         self.tools_reset()
 
     def sprite_group_reset(self):
@@ -656,6 +660,11 @@ class Game():
                 self.events()
                 self.draw()
             self.new_game()
+        elif self.mode == 'home screen':
+            while self.wait:
+                self.dt = self.clock.tick(FPS)/1000
+                self.events()
+            self.new_game()
 
     def events(self):
         # -- User input and controls
@@ -683,6 +692,8 @@ class Game():
                     if event.key == pygame.K_ESCAPE:
                         self.pause_game()
                 elif self.mode == 'death screen':
+                    self.wait = False
+                elif self.mode == 'home screen':
                     self.wait = False
 
     def update(self):
@@ -735,7 +746,8 @@ class Game():
             pygame.draw.line(self.screen, LIGHTBLUE, (0, y), (WIDTH, y))
 
     def home_screen(self):
-        pass
+        self.mode = 'home screen'
+        self.wait_loop()
 
     def game_over(self):
         self.done = True
@@ -755,7 +767,6 @@ class Game():
 run = True
 game = Game()
 game.home_screen()
-game.new_game()
 while run:
     game.game_loop()
     game.wait_loop()
