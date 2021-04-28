@@ -2,6 +2,7 @@ import pygame
 import random
 import os
 import sys
+import pytmx
 
 # -- Global Constants
 
@@ -10,6 +11,7 @@ BLACK = (0,0,0)
 WHITE = (255,255,255)
 BLUE = (50,50,255)
 GREEN = (0, 255, 0)
+DARKGREEN = (0, 100, 0)
 RED = (255, 0, 0)
 YELLOW = (255,255,0)
 PURPLE = (103,13,173)
@@ -112,9 +114,9 @@ class Player(pygame.sprite.Sprite):
         self.image = self.sprites[self.current_action][self.current_sprite]
         self.last_sprite_time = pygame.time.get_ticks()
         self.rect = self.image.get_rect()
-        self.hit_rect = pygame.Rect(0, 0, 30, 64)
+        self.hit_rect = pygame.Rect(0, 0, 30, 60)
         self.hit_rect.center = self.rect.center
-        self.pos = pygame.math.Vector2(x * TILESIZE, y * TILESIZE)
+        self.pos = pygame.math.Vector2(x, y)
         self.vel = pygame.math.Vector2(0, 0)
         self.acc = pygame.math.Vector2(0, 0)
         self.health = health
@@ -199,13 +201,20 @@ class Player(pygame.sprite.Sprite):
             Melee_attack(self.game, int(self.pos.x)-20, int(self.pos.y)+8, 50, 28, self.game.enemy_group, 'r')
 
     def interact(self):
-        hits = pygame.sprite.spritecollide(self, game.portal_group, False, collide_hit_rect)
+        hits = pygame.sprite.spritecollide(self, game.door_group, False, collide_hit_rect)
         if hits:
-            self.game.next_level()
+            if hits[0].open:
+                self.game.next_level()
 
     def hurt(self):
         self.current_action = 5
         self.current_sprite = -1
+
+    def enemy_contact(self):
+        hits = pygame.sprite.spritecollide(self, game.enemy_group, False, collide_hit_rect)
+        if hits:
+            if self.vel.y > 0.3 and self.rect.bottom > hits[0].rect.center[1]:
+                self.vel.y = -9.5
 
     def animations(self):
         now = pygame.time.get_ticks()
@@ -289,6 +298,7 @@ class Player(pygame.sprite.Sprite):
 
     def update(self):
         self.movement_controls()
+        #self.enemy_contact()
         self.acc.x += self.vel.x*FRICTION
         self.vel += self.acc
         self.vel.y = min(self.vel.y, 15)        #terminal velocity
@@ -340,7 +350,7 @@ class Slime(pygame.sprite.Sprite):
         self.rect = self.image.get_rect()
         self.hit_rect = pygame.Rect(0, 0, 32, 32)
         self.hit_rect.center = self.rect.center
-        self.pos = pygame.math.Vector2(x * TILESIZE, y * TILESIZE)
+        self.pos = pygame.math.Vector2(x, y)
         self.vel = pygame.math.Vector2(0, 0)
         self.acc = pygame.math.Vector2(0, 0)
         self.last_attack = pygame.time.get_ticks()
@@ -461,44 +471,51 @@ class Slime(pygame.sprite.Sprite):
 
 #Wall class
 class Wall(pygame.sprite.Sprite):
-    def __init__(self, game, x, y, colour):
-        self.groups = game.all_sprites_group, game.wall_group
+    def __init__(self, game, x, y, w, h):
+        self.groups = game.wall_group
         pygame.sprite.Sprite.__init__(self, self.groups)
         self.game = game
-        self.image = pygame.Surface((TILESIZE, TILESIZE))
-        self.image.fill(colour)
-        self.rect = self.image.get_rect()
+        x, y, w, h = int(x), int(y), int(w), int(h)
+        self.rect = pygame.Rect(x, y, w, h)
+        self.hit_rect = self.rect
         self.x = x
         self.y = y
-        self.rect.x = x * TILESIZE
-        self.rect.y = y * TILESIZE
+        self.rect.x = x
+        self.rect.y = y
 
 #Ladder class
 class Ladder(pygame.sprite.Sprite):
-    def __init__(self, game, x, y, colour):
-        self.groups = game.all_sprites_group, game.ladder_group
+    def __init__(self, game, x, y, w, h):
+        self.groups = game.ladder_group
         pygame.sprite.Sprite.__init__(self, self.groups)
         self.game = game
-        self.image = pygame.Surface((TILESIZE, TILESIZE))
-        self.image.fill(colour)
-        self.rect = self.image.get_rect()
+        x, y, w, h = int(x), int(y), int(w), int(h)
+        self.rect = pygame.Rect(x, y, w, h)
         self.x = x
         self.y = y
-        self.rect.x = x * TILESIZE
-        self.rect.y = y * TILESIZE
+        self.rect.x = x
+        self.rect.y = y
 
-class Portal(pygame.sprite.Sprite):
-    def __init__(self, game, x, y, colour):
-        self.groups = game.all_sprites_group, game.portal_group
+class Door(pygame.sprite.Sprite):
+    def __init__(self, game, x, y):
+        self.groups = game.all_sprites_group, game.door_group
         pygame.sprite.Sprite.__init__(self, self.groups)
         self.game = game
-        self.image = pygame.Surface((TILESIZE, TILESIZE))
-        self.image.fill(colour)
+        self.closed = pygame.image.load('images/door/closed.png')
+        self.opened = pygame.image.load('images/door/open.png')
+        self.image = self.closed
         self.rect = self.image.get_rect()
+        x, y = int(x), int(y)
         self.x = x
         self.y = y
-        self.rect.x = x * TILESIZE
-        self.rect.y = y * TILESIZE
+        self.rect.x = x
+        self.rect.y = y
+        self.open = False
+        
+    def update(self):
+        if len(game.enemy_group.sprites()) == 0 and not self.open:
+            self.open = True
+            self.image = self.opened
 
 # -- Utility classes
 
@@ -550,6 +567,27 @@ class Map():
         self.tileheight = len(self.maplist)
         self.width = self.tilewidth * TILESIZE
         self.height = self.tileheight * TILESIZE
+
+class TiledMap:
+    def __init__(self, filename):
+        tm = pytmx.load_pygame(filename, pixelalpha=True)
+        self.width = tm.width * tm.tilewidth
+        self.height = tm.height * tm.tileheight
+        self.tmxdata = tm
+
+    def render(self, surface):
+        ti = self.tmxdata.get_tile_image_by_gid
+        for layer in self.tmxdata.visible_layers:
+            if isinstance(layer, pytmx.TiledTileLayer):
+                for x, y, gid, in layer:
+                    tile = ti(gid)
+                    if tile:
+                        surface.blit(tile, (x * self.tmxdata.tilewidth, y * self.tmxdata.tileheight))
+
+    def make_map(self):
+        temp_surface = pygame.Surface((self.width, self.height))
+        self.render(temp_surface)
+        return temp_surface
         
 #Camera class
 class Camera():
@@ -584,14 +622,14 @@ class Game():
         pygame.display.set_caption(GAMETITLE)
         self.clock = pygame.time.Clock()
         pygame.key.set_repeat(100, 50)
-        self.myfont = pygame.font.Font('fonts/m5x7.ttf', 30)
+        self.myfont = pygame.font.Font('fonts/m5x7.ttf', 40)
         self.tools_reset()
 
     def sprite_group_reset(self):
         self.all_sprites_group = pygame.sprite.Group()
         self.wall_group = pygame.sprite.Group()
         self.ladder_group = pygame.sprite.Group()
-        self.portal_group = pygame.sprite.Group()
+        self.door_group = pygame.sprite.Group()
         self.enemy_group = pygame.sprite.Group()
         self.player_group = pygame.sprite.Group()
         self.melee_attack_group = pygame.sprite.Group()
@@ -617,26 +655,20 @@ class Game():
         self.camera = Camera(self.map.width, self.map.height)
 
     def load_map(self, level):
-        self.map = Map('maps/map'+str(level)+'.txt')
-        x = 0
-        y = 0
-        for line in self.map.maplist:
-            for item in line:
-                if item == '1':
-                    Wall(self, x, y, PURPLE)
-                if item == '2':
-                    Wall(self, x, y, BRIGHTBLUE)
-                if item == '3':
-                    Ladder(self, x, y, YELLOW)
-                if item == 'p':
-                    self.player = Player(self, x, y, self.player_health)
-                if item == 'd':
-                    Portal(self, x, y, GREEN)
-                if item == 's':
-                    Slime(self, x, y)
-                x += 1
-            x = 0
-            y += 1
+        self.map = TiledMap('maps/map'+str(level)+'.tmx')
+        self.map_img = self.map.make_map()
+        self.map_rect = self.map_img.get_rect()
+        for tile_object in self.map.tmxdata.objects:
+            if tile_object.name == 'player':
+                self.player = Player(self, tile_object.x, tile_object.y, self.player_health)
+            if tile_object.name == 'slime':
+                Slime(self, tile_object.x, tile_object.y)
+            if tile_object.name == 'ladder':
+                Ladder(self, tile_object.x, tile_object.y, tile_object.width, tile_object.height)
+            if tile_object.name == 'wall':
+                Wall(self, tile_object.x, tile_object.y, tile_object.width, tile_object.height)
+            if tile_object.name == 'door':
+                Door(self, tile_object.x, tile_object.y)
 
     def game_loop(self):
         self.done = False
@@ -721,12 +753,9 @@ class Game():
             self.blit_texts(string, WHITE, 640, 32, 32, self.myfont)
 
     def draw(self):
-        self.screen.fill(BGCOLOUR)
+        self.screen.blit(self.map_img, self.camera.apply_rect(self.map_rect))
         if self.show_grid:
             self.show_grid_lines()
-        #self.all_sprites_group.draw(self.screen)
-        #self.player_group.draw(self.screen)
-        #all sprites draw replaced with for loop blitting individual sprites on to the screen - doing the same thing but now camera can be applied
         for i in self.all_sprites_group:
             self.screen.blit(i.image, self.camera.apply(i))
         for i in self.enemy_group:
@@ -747,6 +776,9 @@ class Game():
 
     def home_screen(self):
         self.mode = 'home screen'
+        string = 'Press any key to start'
+        self.blit_texts(string, WHITE, 380, 384, 32, self.myfont)
+        pygame.display.flip()
         self.wait_loop()
 
     def game_over(self):
