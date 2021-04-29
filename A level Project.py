@@ -46,9 +46,9 @@ CAMERALAG = 25
 
 # -- Sprites Classes
 def collide_hit_rect(a, b):
-    return a.hit_rect.colliderect(b.rect)
+    return a.hit_rect.colliderect(b.hit_rect)
 
-def load_sprites(paths):
+def load_sprites(paths, magnify):
     sprites = []
     mirrored_sprites = []
     for path in paths:
@@ -57,7 +57,7 @@ def load_sprites(paths):
         for i in sorted(os.listdir(path)):
             if i.endswith('.png'):
                 image = pygame.image.load(os.path.join(path, i))
-                size = tuple(2*x for x in image.get_size())
+                size = tuple(magnify*x for x in image.get_size())
                 image = pygame.transform.scale(image, size)
                 temp_list.append(image)
                 temp_list2.append(pygame.transform.flip(image, True, False))
@@ -96,7 +96,7 @@ class Player(pygame.sprite.Sprite):
         pygame.sprite.Sprite.__init__(self, self.groups)
         self.game = game
         paths = ['images/player/idle', 'images/player/run', 'images/player/jump', 'images/player/fall', 'images/player/attack', 'images/player/hurt', 'images/player/death', 'images/player/air_attack']
-        self.sprites, self.mirrored_sprites = load_sprites(paths)
+        self.sprites, self.mirrored_sprites = load_sprites(paths, 2)
         self.current_action = 0
         '''
         Player actions:
@@ -122,6 +122,7 @@ class Player(pygame.sprite.Sprite):
         self.health = health
         self.last_attack = pygame.time.get_ticks()
         self.attack_cooldown = 1000
+        self.invincible = False
 
     def on_ladder(self):
         hits = pygame.sprite.spritecollide(self, game.ladder_group, False, collide_hit_rect)
@@ -146,7 +147,7 @@ class Player(pygame.sprite.Sprite):
                 self.interact()
             if keys[pygame.K_z]:
                 now = pygame.time.get_ticks()
-                if now - self.last_attack >= self.attack_cooldown:
+                if self.current_action not in [4, 5, 6] and now - self.last_attack >= self.attack_cooldown:
                     if on_floor(self):
                         self.last_attack = pygame.time.get_ticks()
                         self.current_action = 4
@@ -180,25 +181,25 @@ class Player(pygame.sprite.Sprite):
 
     def attack(self):
         if self.face_left:
-            Melee_attack(self.game, int(self.pos.x)-20, int(self.pos.y)+14, 52, 68, self.game.enemy_group, 'r')
+            Melee_attack(self.game, int(self.hit_rect.center[0])-20, int(self.pos.y)+14, 52, 68, self.game.enemy_group, 'r', 125, False)
         else:
-            Melee_attack(self.game, int(self.pos.x)+20, int(self.pos.y)+14, 52, 68, self.game.enemy_group, 'l')
+            Melee_attack(self.game, int(self.hit_rect.center[0])+20, int(self.pos.y)+14, 52, 68, self.game.enemy_group, 'l', 125, False)
 
     def attack2(self):
         if self.face_left:
-            Melee_attack(self.game, int(self.pos.x)-20, int(self.pos.y)+14, 52, 68, self.game.enemy_group, 'r')
-            Melee_attack(self.game, int(self.pos.x)+26, int(self.pos.y)+32, 40, 32, self.game.enemy_group, 'l')
+            Melee_attack(self.game, int(self.hit_rect.center[0])-20, int(self.pos.y)+14, 52, 68, self.game.enemy_group, 'r', 125, False)
+            Melee_attack(self.game, int(self.hit_rect.center[0])+26, int(self.pos.y)+32, 40, 32, self.game.enemy_group, 'l', 125, False)
         else:
-            Melee_attack(self.game, int(self.pos.x)+20, int(self.pos.y)+14, 52, 68, self.game.enemy_group, 'l')
-            Melee_attack(self.game, int(self.pos.x)-26, int(self.pos.y)+32, 40, 32, self.game.enemy_group, 'r')
+            Melee_attack(self.game, int(self.hit_rect.center[0])+20, int(self.pos.y)+14, 52, 68, self.game.enemy_group, 'l', 125, False)
+            Melee_attack(self.game, int(self.hit_rect.center[0])-26, int(self.pos.y)+32, 40, 32, self.game.enemy_group, 'r', 125, False)
 
     def air_attack(self):
         if self.face_left:
-            Melee_attack(self.game, int(self.pos.x)-24, int(self.pos.y)+16, 50, 44, self.game.enemy_group, 'r')
-            Melee_attack(self.game, int(self.pos.x)+20, int(self.pos.y)+8, 50, 28, self.game.enemy_group, 'l')
+            Melee_attack(self.game, int(self.hit_rect.center[0])-24, int(self.pos.y)+16, 50, 44, self.game.enemy_group, 'r', 125, False)
+            Melee_attack(self.game, int(self.hit_rect.center[0])+20, int(self.pos.y)+8, 50, 28, self.game.enemy_group, 'l', 125, False)
         else:
-            Melee_attack(self.game, int(self.pos.x)+24, int(self.pos.y)+16, 50, 44, self.game.enemy_group, 'l')
-            Melee_attack(self.game, int(self.pos.x)-20, int(self.pos.y)+8, 50, 28, self.game.enemy_group, 'r')
+            Melee_attack(self.game, int(self.hit_rect.center[0])+24, int(self.pos.y)+16, 50, 44, self.game.enemy_group, 'l', 125, False)
+            Melee_attack(self.game, int(self.hit_rect.center[0])-20, int(self.pos.y)+8, 50, 28, self.game.enemy_group, 'r', 125, False)
 
     def interact(self):
         hits = pygame.sprite.spritecollide(self, game.door_group, False, collide_hit_rect)
@@ -209,6 +210,7 @@ class Player(pygame.sprite.Sprite):
     def hurt(self):
         self.current_action = 5
         self.current_sprite = -1
+        self.invincible = True
 
     def enemy_contact(self):
         hits = pygame.sprite.spritecollide(self, game.enemy_group, False, collide_hit_rect)
@@ -268,6 +270,7 @@ class Player(pygame.sprite.Sprite):
             if now - self.last_sprite_time >= 125:
                 self.current_sprite += 1
                 if self.current_sprite > len(sprites_list[self.current_action])-1:
+                    self.invincible = False
                     self.current_action = 0
                     self.current_sprite = 0
                 self.image = sprites_list[self.current_action][self.current_sprite]
@@ -323,6 +326,9 @@ class Player(pygame.sprite.Sprite):
         if self.health <= 0 and self.current_action != 6:
             self.current_action = 6
             self.current_sprite = -1
+        if self.pos.y > self.game.map.height + 5000:
+            self.kill()
+            self.game.game_over()
         self.animations()
 
 #Enemies
@@ -333,7 +339,8 @@ class Slime(pygame.sprite.Sprite):
         self.groups = game.enemy_group
         pygame.sprite.Sprite.__init__(self, self.groups)
         self.game = game
-        self.sprites, self.mirrored_sprites = load_sprites(['images/mobs/slime/idle', 'images/mobs/slime/move', 'images/mobs/slime/attack', 'images/mobs/slime/death', 'images/mobs/slime/hurt'])
+        paths = ['images/mobs/slime/idle', 'images/mobs/slime/move', 'images/mobs/slime/attack', 'images/mobs/slime/death', 'images/mobs/slime/hurt']
+        self.sprites, self.mirrored_sprites = load_sprites(paths, 2)
         self.current_action = 0
         '''
         Slime actions:
@@ -356,19 +363,20 @@ class Slime(pygame.sprite.Sprite):
         self.last_attack = pygame.time.get_ticks()
         self.attack_rate = 2000
         self.health = 5
+        self.invincible = False
 
     def movements(self):
         now = pygame.time.get_ticks()
         self.acc = pygame.math.Vector2(0, GRAVITY)
-        if self.current_action != 2 and now - self.last_attack >= self.attack_rate:
-            if 40 < abs(self.pos.x - game.player.pos.x) < 400 and abs(self.pos.y - game.player.pos.y) < 125:
+        if self.current_action not in [2, 3, 4] and now - self.last_attack >= self.attack_rate:
+            if 40 < abs(self.hit_rect.center[0] - game.player.hit_rect.center[0]) < 400 and abs(self.pos.y - game.player.pos.y) < 125:
                 if self.pos.x > game.player.pos.x:
                     self.acc.x = -0.2
                     self.face_left = False
                 else:
                     self.acc.x = 0.2
                     self.face_left = True
-            if 40 > abs(self.pos.x - game.player.pos.x) and abs(self.pos.y - game.player.pos.y) < 60:
+            if 40 > abs(self.hit_rect.center[0] - game.player.hit_rect.center[0]) and abs(self.pos.y - game.player.pos.y) < 60:
                 self.acc.x = 0
                 self.current_action = 2
                 self.current_sprite = -1
@@ -376,13 +384,14 @@ class Slime(pygame.sprite.Sprite):
 
     def attack(self):
         if self.face_left:
-            Melee_attack(self.game, int(self.pos.x)+32, int(self.pos.y), 24, 32, self.game.player_group, 'l')
+            Melee_attack(self.game, int(self.hit_rect.center[0])+32, int(self.pos.y), 24, 32, self.game.player_group, 'l', 125, True)
         else:
-            Melee_attack(self.game, int(self.pos.x)-32, int(self.pos.y), 24, 32, self.game.player_group, 'r')
+            Melee_attack(self.game, int(self.hit_rect.center[0])-32, int(self.pos.y), 24, 32, self.game.player_group, 'r', 125, True)
 
     def hurt(self):
         self.current_action = 4
         self.current_sprite = -1
+        self.invincible = True
 
     def avoid_stack(self):
         for i in self.game.enemy_group:
@@ -437,6 +446,7 @@ class Slime(pygame.sprite.Sprite):
             if now - self.last_sprite_time >= 125:
                 self.current_sprite += 1
                 if self.current_sprite > len(sprites_list[self.current_action])-1:
+                    self.invincible = False
                     self.current_action = 0
                     self.current_sprite = 0
                 self.image = sprites_list[self.current_action][self.current_sprite]
@@ -466,6 +476,145 @@ class Slime(pygame.sprite.Sprite):
             self.current_action = 3
             self.current_sprite = -1
         self.animations()
+
+#demon class
+class Demon(pygame.sprite.Sprite):
+    def __init__(self, game, x, y):
+        self.groups = game.enemy_group
+        pygame.sprite.Sprite.__init__(self, self.groups)
+        self.game = game
+        paths = ['images/mobs/demon/idle', 'images/mobs/demon/attack', 'images/mobs/demon/hurt']
+        self.sprites, self.mirrored_sprites = load_sprites(paths, 2)
+        self.berserk_sprites, self.mirrored_berserk_sprites = load_sprites(['images/mobs/demon/berserk'], 2)
+        self.current_action = 0
+        '''
+        Demon actions:
+        0. idle
+        1. attack
+        2. hurt
+        '''
+        self.current_sprite = 0
+        self.face_left = False
+        self.image = self.sprites[self.current_action][self.current_sprite]
+        self.last_sprite_time = pygame.time.get_ticks()
+        self.rect = self.image.get_rect()
+        self.hit_rect = pygame.Rect(0, 0, 128, 192)
+        self.hit_rect.center = self.rect.center
+        self.pos = pygame.math.Vector2(x, y)
+        self.vel = pygame.math.Vector2(0, 0)
+        self.acc = pygame.math.Vector2(0, 0)
+        self.last_attack = pygame.time.get_ticks()
+        self.attack_rate = 4000
+        self.health = 50
+        self.attack_speed = 125
+        self.movement_speed = 0.4
+        self.vision = 500
+        self.invincible = False
+        self.switch_sprites = False
+
+    def movements(self):
+        now = pygame.time.get_ticks()
+        self.acc = pygame.math.Vector2(0, GRAVITY)
+        if self.current_action not in [1, 2] and now - self.last_attack >= self.attack_rate:
+            if 150 < abs(self.hit_rect.center[0] - game.player.hit_rect.center[0]) < self.vision and abs(self.pos.y - game.player.pos.y) < 300:
+                if self.pos.x > game.player.pos.x:
+                    self.acc.x = -self.movement_speed
+                    self.face_left = False
+                else:
+                    self.acc.x = self.movement_speed
+                    self.face_left = True
+            if 150 > abs(self.hit_rect.center[0] - game.player.hit_rect.center[0]) and abs(self.pos.y - game.player.pos.y) < 200:
+                if self.pos.x > game.player.pos.x:
+                    self.face_left = False
+                else:
+                    self.face_left = True
+                self.acc.x = 0
+                self.current_action = 1
+                self.current_sprite = -1
+                self.last_attack = pygame.time.get_ticks()
+
+    def attack(self):
+        if self.face_left:
+            Melee_attack(self.game, int(self.hit_rect.center[0])+90, int(self.pos.y)+130, 250, 120, self.game.player_group, 'l', 125, False)
+        else:
+            Melee_attack(self.game, int(self.hit_rect.center[0])-90, int(self.pos.y)+130, 250, 120, self.game.player_group, 'r', 125, False)
+
+    def hurt(self):
+        self.invincible = True
+        self.current_action = 2
+        self.current_sprite = -1
+
+    def berserk(self):
+        if not self.switch_sprites:
+            self.sprites[1] = self.berserk_sprites[0]
+            self.mirrored_sprites[1] = self.mirrored_berserk_sprites[0]
+            self.switch_sprites = True
+        self.movement_speed = 0.3+(50-self.health)*0.01
+        self.attack_speed = 100-(50-self.health)*1.2
+        self.attack_rate = 4000-(50-self.health)*50
+        self.vision = 500+(50-self.health)*2
+        
+    def animations(self):
+        now = pygame.time.get_ticks()
+        sprites_list = self.sprites
+        if self.face_left:
+            sprites_list = self.mirrored_sprites
+        if self.current_action == 0:        #idle
+            if now - self.last_sprite_time >= 200:
+                self.current_sprite += 1
+                if self.current_sprite > len(sprites_list[self.current_action])-1:
+                    self.current_sprite = 0
+                self.image = sprites_list[self.current_action][self.current_sprite]
+                self.last_sprite_time = pygame.time.get_ticks()
+        elif self.current_action == 1:      #attacking
+            if now - self.last_sprite_time >= self.attack_speed:
+                self.current_sprite += 1
+                if self.current_sprite >= 7 and self.current_sprite <= 14:
+                    self.attack()
+                if self.current_sprite == 15 and 150 > abs(self.hit_rect.center[0] - game.player.hit_rect.center[0]) and abs(self.pos.y - game.player.pos.y) < 200:
+                    if self.pos.x > game.player.pos.x:
+                        self.face_left = False
+                    else:
+                        self.face_left = True
+                    self.current_sprite = 7
+                    self.attack()
+                if self.current_sprite > len(sprites_list[self.current_action])-1:
+                    self.current_sprite = 0
+                    self.current_action = 0
+                self.image = sprites_list[self.current_action][self.current_sprite]
+                self.last_sprite_time = pygame.time.get_ticks()
+        elif self.current_action == 2:      #hurt
+            if now - self.last_sprite_time >= 75:
+                self.current_sprite += 1
+                if self.current_sprite > len(sprites_list[self.current_action])-1:
+                    self.invincible = False
+                    self.current_sprite = 0
+                    self.current_action = 0
+                    self.last_attack = 0
+                self.image = sprites_list[self.current_action][self.current_sprite]
+                self.last_sprite_time = pygame.time.get_ticks()
+
+    def update(self):
+        self.movements()
+        self.acc.x += self.vel.x*FRICTION
+        self.vel += self.acc
+        self.vel.y = min(self.vel.y, 15)        #termial velocity
+        self.pos += self.vel + 0.5 * self.acc
+        self.hit_rect.x = int(self.pos.x)
+        wall_collisions(self, 'x')
+        self.hit_rect.y = int(self.pos.y)
+        wall_collisions(self, 'y')
+        self.rect.center = (self.hit_rect.center[0], self.hit_rect.center[1]-70)
+        if abs(self.vel.x) < 0.2:
+            self.vel.x = 0
+        if self.current_action not in [1, 2]:
+            self.current_action = 0
+        if self.health <= 25:
+            self.berserk()
+        if self.health <= 0:
+            self.kill()
+        self.animations()
+        
         
         
 
@@ -491,6 +640,7 @@ class Ladder(pygame.sprite.Sprite):
         self.game = game
         x, y, w, h = int(x), int(y), int(w), int(h)
         self.rect = pygame.Rect(x, y, w, h)
+        self.hit_rect = self.rect
         self.x = x
         self.y = y
         self.rect.x = x
@@ -505,6 +655,7 @@ class Door(pygame.sprite.Sprite):
         self.opened = pygame.image.load('images/door/open.png')
         self.image = self.closed
         self.rect = self.image.get_rect()
+        self.hit_rect = self.rect
         x, y = int(x), int(y)
         self.x = x
         self.y = y
@@ -521,7 +672,7 @@ class Door(pygame.sprite.Sprite):
 
 #Melee attack class
 class Melee_attack(pygame.sprite.Sprite):
-    def __init__(self, game, x, y, w, h, target, direction):
+    def __init__(self, game, x, y, w, h, target, direction, life_time, single_attack):
         self.groups = game.all_sprites_group, game.melee_attack_group
         pygame.sprite.Sprite.__init__(self, self.groups)
         self.game = game
@@ -529,12 +680,14 @@ class Melee_attack(pygame.sprite.Sprite):
         if self.game.show_hit_rect:
             self.image.fill(RED)
         self.rect = self.image.get_rect()
-        self.hit_rect = pygame.Rect(x, y, 32, 32)
+        self.hit_rect = pygame.Rect(0, 0, w, h)
+        self.hit_rect.center = (x, y)
         self.rect.center = self.hit_rect.center
         self.target = target
         self.spawn_time = pygame.time.get_ticks()
-        self.life_time = 125
-        self.pos = pygame.math.Vector2(x, y)
+        self.life_time = life_time
+        self.single_attack = single_attack
+        #self.pos = pygame.math.Vector2(x, y)
         self.direction = direction
 
     def update(self):
@@ -544,7 +697,7 @@ class Melee_attack(pygame.sprite.Sprite):
         hits = pygame.sprite.spritecollide(self, self.target, False, collide_hit_rect)
         if hits:
             for i in hits:
-                if i.health > 0:
+                if i.health > 0 and not i.invincible:
                     i.health -= 1
                     if self.direction == 'l':
                         i.vel.x = KNOCKBACK
@@ -552,7 +705,8 @@ class Melee_attack(pygame.sprite.Sprite):
                     else:
                         i.vel.x = -KNOCKBACK
                         i.hurt()
-            self.kill()
+            if self.single_attack:
+                self.kill()
         
 # -- Map and Camera
 
@@ -591,11 +745,11 @@ class TiledMap:
         
 #Camera class
 class Camera():
-    def __init__(self, width, height):
+    def __init__(self, width, height, x, y):
         self.width = width
         self.height = height
-        self.x = 0
-        self.y = 0
+        self.x = int(x)
+        self.y = int(y)
 
     def apply(self, entity):
         return entity.rect.move(-self.x, -self.y)
@@ -652,7 +806,6 @@ class Game():
         except:
             self.level = LEVEL + 1
             self.load_map(self.level)
-        self.camera = Camera(self.map.width, self.map.height)
 
     def load_map(self, level):
         self.map = TiledMap('maps/map'+str(level)+'.tmx')
@@ -663,12 +816,15 @@ class Game():
                 self.player = Player(self, tile_object.x, tile_object.y, self.player_health)
             if tile_object.name == 'slime':
                 Slime(self, tile_object.x, tile_object.y)
+            if tile_object.name == 'demon':
+                self.demon = Demon(self, tile_object.x, tile_object.y)
             if tile_object.name == 'ladder':
                 Ladder(self, tile_object.x, tile_object.y, tile_object.width, tile_object.height)
             if tile_object.name == 'wall':
                 Wall(self, tile_object.x, tile_object.y, tile_object.width, tile_object.height)
             if tile_object.name == 'door':
                 Door(self, tile_object.x, tile_object.y)
+        self.camera = Camera(self.map.width, self.map.height, self.player.pos.x, self.player.pos.y)
 
     def game_loop(self):
         self.done = False
@@ -744,6 +900,10 @@ class Game():
 
     def draw_texts(self):
         string = 'Player health:' + str(self.player.health)
+        try:
+            string += '\nDemon health: ' + str(self.demon.health)
+        except:
+            pass
         self.blit_texts(string, WHITE, 384, 32, 32, self.myfont)
         if self.show_stats:
             string = 'Camera Offset x: ' + str(self.camera.x) + '\nCamera Offset y: ' + str(self.camera.y)
