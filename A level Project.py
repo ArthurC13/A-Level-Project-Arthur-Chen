@@ -35,6 +35,7 @@ GRIDHEIGHT = HEIGHT/TILESIZE
 PLAYERACC = 0.9
 JUMPVEL = -9.5
 LADDERVEL = 4
+WATERVEL = 2.5
 FRICTION = -0.15
 GRAVITY = 0.3
 KNOCKBACK = 15
@@ -123,18 +124,41 @@ class Player(pygame.sprite.Sprite):
         self.last_attack = pygame.time.get_ticks()
         self.attack_cooldown = 1000
         self.invincible = False
-
-    def on_ladder(self):
-        hits = pygame.sprite.spritecollide(self, game.ladder_group, False, collide_hit_rect)
-        if hits:
-            return [True, hits[0].rect.left]
-        return [False]
+        self.air = 1000
 
     def movement_controls(self):
         self.acc = pygame.math.Vector2(0, GRAVITY)
         ladder = pygame.sprite.spritecollide(self, game.ladder_group, False, collide_hit_rect)
+        water = pygame.sprite.spritecollide(self, game.water_group, False, collide_hit_rect)
         keys = pygame.key.get_pressed()
-        if not ladder:
+        if ladder:
+            self.acc.y = 0
+            self.vel.y = 0
+            if keys[pygame.K_LEFT]:
+                self.acc.x = -PLAYERACC
+                self.face_left = True
+            if keys[pygame.K_RIGHT]:
+                self.acc.x = PLAYERACC
+                self.face_left = False
+            if keys[pygame.K_UP]:
+                self.vel.y = -LADDERVEL
+            if keys[pygame.K_DOWN]:
+                self.vel.y = LADDERVEL
+        elif water:
+            self.air_check(water[0])
+            self.acc.y = 0
+            self.vel.y = 2
+            if keys[pygame.K_LEFT]:
+                self.acc.x = -PLAYERACC/2
+                self.face_left = True
+            if keys[pygame.K_RIGHT]:
+                self.acc.x = PLAYERACC/2
+                self.face_left = False
+            if keys[pygame.K_UP]:
+                self.vel.y = -WATERVEL
+            if keys[pygame.K_DOWN]:
+                self.vel.y = WATERVEL
+        else:
             if keys[pygame.K_LEFT]:
                 self.acc.x = -PLAYERACC
                 self.face_left = True
@@ -156,20 +180,7 @@ class Player(pygame.sprite.Sprite):
                         self.last_attack = pygame.time.get_ticks()
                         self.current_action = 7
                         self.current_sprite = -1
-        else:
-            self.acc.y = 0
-            self.vel.y = 0
-            if keys[pygame.K_LEFT]:
-                self.acc.x = -PLAYERACC
-                self.face_left = True
-            if keys[pygame.K_RIGHT]:
-                self.acc.x = PLAYERACC
-                self.face_left = False
-            if keys[pygame.K_UP]:
-                self.vel.y = -LADDERVEL
-            if keys[pygame.K_DOWN]:
-                self.vel.y = LADDERVEL
-                
+                        
     def jump(self):
         hits = on_floor(self)
         self.hit_rect.y -= 1
@@ -211,6 +222,10 @@ class Player(pygame.sprite.Sprite):
         self.current_action = 5
         self.current_sprite = -1
         self.invincible = True
+
+    def air_check(self, water):
+        if self.rect.top > water.rect.top:
+            self.air -= 1
 
     def enemy_contact(self):
         hits = pygame.sprite.spritecollide(self, game.enemy_group, False, collide_hit_rect)
@@ -369,7 +384,7 @@ class Slime(pygame.sprite.Sprite):
         now = pygame.time.get_ticks()
         self.acc = pygame.math.Vector2(0, GRAVITY)
         if self.current_action not in [2, 3, 4] and now - self.last_attack >= self.attack_rate:
-            if 40 < abs(self.hit_rect.center[0] - game.player.hit_rect.center[0]) < 400 and abs(self.pos.y - game.player.pos.y) < 125:
+            if 40 < abs(self.hit_rect.center[0] - game.player.hit_rect.center[0]) < 400 and abs(self.pos.y - game.player.pos.y) < 60:
                 if self.hit_rect.center[0] > game.player.hit_rect.center[0]:
                     self.acc.x = -0.2
                     self.face_left = False
@@ -655,6 +670,20 @@ class Wall(pygame.sprite.Sprite):
         self.rect.x = x
         self.rect.y = y
 
+#Water class
+class Water(pygame.sprite.Sprite):
+    def __init__(self, game, x, y, w, h):
+        self.groups = game.water_group
+        pygame.sprite.Sprite.__init__(self, self.groups)
+        self.game = game
+        x, y, w, h = int(x), int(y), int(w), int(h)
+        self.rect = pygame.Rect(x, y, w, h)
+        self.hit_rect = self.rect
+        self.x = x
+        self.y = y
+        self.rect.x = x
+        self.rect.y = y
+
 #Ladder class
 class Ladder(pygame.sprite.Sprite):
     def __init__(self, game, x, y, w, h):
@@ -669,6 +698,7 @@ class Ladder(pygame.sprite.Sprite):
         self.rect.x = x
         self.rect.y = y
 
+#Door class
 class Door(pygame.sprite.Sprite):
     def __init__(self, game, x, y):
         self.groups = game.all_sprites_group, game.door_group
@@ -807,6 +837,7 @@ class Game():
         self.wall_group = pygame.sprite.Group()
         self.ladder_group = pygame.sprite.Group()
         self.door_group = pygame.sprite.Group()
+        self.water_group = pygame.sprite.Group()
         self.enemy_group = pygame.sprite.Group()
         self.player_group = pygame.sprite.Group()
         self.melee_attack_group = pygame.sprite.Group()
@@ -843,6 +874,8 @@ class Game():
                 self.demon = Demon(self, tile_object.x, tile_object.y)
             if tile_object.name == 'ladder':
                 Ladder(self, tile_object.x, tile_object.y, tile_object.width, tile_object.height)
+            if tile_object.name == 'water':
+                Water(self, tile_object.x, tile_object.y, tile_object.width, tile_object.height)
             if tile_object.name == 'wall':
                 Wall(self, tile_object.x, tile_object.y, tile_object.width, tile_object.height)
             if tile_object.name == 'door':
@@ -923,7 +956,7 @@ class Game():
             counter += 1
 
     def draw_texts(self):
-        string = 'Player health:' + str(self.player.health)
+        string = 'Player health:' + str(self.player.health) + '\nPlayer Air:' + str(self.player.air)
         try:
             string += '\nDemon health: ' + str(self.demon.health)
         except:
