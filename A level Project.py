@@ -58,7 +58,7 @@ def load_sprites(paths, magnify):
         for i in sorted(os.listdir(path)):
             if i.endswith('.png'):
                 image = pygame.image.load(os.path.join(path, i)).convert_alpha()
-                size = tuple(magnify*x for x in image.get_size())
+                size = tuple(int(magnify*x) for x in image.get_size())
                 image = pygame.transform.scale(image, size)
                 temp_list.append(image)
                 temp_list2.append(pygame.transform.flip(image, True, False))
@@ -159,6 +159,8 @@ class Player(pygame.sprite.Sprite):
             if keys[pygame.K_DOWN]:
                 self.vel.y = WATERVEL
         else:
+            if self.air <= 1000:
+                self.air += 1
             if keys[pygame.K_LEFT]:
                 self.acc.x = -PLAYERACC
                 self.face_left = True
@@ -226,6 +228,9 @@ class Player(pygame.sprite.Sprite):
     def air_check(self, water):
         if self.rect.top > water.rect.top:
             self.air -= 1
+            if self.air <= 0 and self.current_action != 6:
+                self.current_action = 6
+                self.current_sprite = -1
 
     def enemy_contact(self):
         hits = pygame.sprite.spritecollide(self, game.enemy_group, False, collide_hit_rect)
@@ -652,6 +657,122 @@ class Demon(pygame.sprite.Sprite):
             self.current_action = 3
             self.current_sprite = -1
         self.animations()
+
+#Nightmare class
+class Hell_hound(pygame.sprite.Sprite):
+    def __init__(self, game, x, y):
+        self.groups = game.enemy_group
+        pygame.sprite.Sprite.__init__(self, self.groups)
+        self.game = game
+        paths = ['images/mobs/hell_hound/idle', 'images/mobs/hell_hound/walk', 'images/mobs/hell_hound/run', 'images/mobs/hell_hound/jump']
+        self.sprites, self.mirrored_sprites = load_sprites(paths, 2)
+        self.current_action = 0
+        '''
+        Nightmare actions:
+        0. idle
+        1. walk
+        2. run
+        3. jump
+        '''
+        self.current_sprite = 0
+        self.face_left = False
+        self.image = self.sprites[self.current_action][self.current_sprite]
+        self.last_sprite_time = pygame.time.get_ticks()
+        self.rect = self.image.get_rect()
+        self.hit_rect = pygame.Rect(0, 0, 70, 42)
+        self.hit_rect.midtop = self.rect.midtop
+        self.pos = pygame.math.Vector2(x, y)
+        self.vel = pygame.math.Vector2(0, 0)
+        self.acc = pygame.math.Vector2(0, 0)
+        self.last_attack = pygame.time.get_ticks()
+        self.attack_rate = 000
+        self.health = 10
+        self.attack_speed = 90
+        self.movement_speed = 0.8
+        self.vision = 500
+        self.invincible = False
+
+    def movements(self):
+        now = pygame.time.get_ticks()
+        self.acc = pygame.math.Vector2(0, GRAVITY)
+        if self.current_action not in [3] and now - self.last_attack >= self.attack_rate:
+            if 80 < abs(self.hit_rect.center[0] - game.player.hit_rect.center[0]) < self.vision and abs(self.pos.y - game.player.pos.y) < 150:
+                self.current_action = 2
+                if self.hit_rect.center[0] > game.player.hit_rect.center[0]:
+                    self.acc.x = -self.movement_speed
+                    self.face_left = False
+                else:
+                    self.acc.x = self.movement_speed
+                    self.face_left = True
+            elif 80 > abs(self.hit_rect.center[0] - game.player.hit_rect.center[0]) and abs(self.pos.y - game.player.pos.y) < 150:
+                self.current_action = 3
+                self.current_sprite = -1
+                self.last_attack = pygame.time.get_ticks()
+
+    def attack(self):
+        if self.face_left:
+            Melee_attack(self.game, int(self.hit_rect.center[0])+90, int(self.pos.y)+130, 250, 120, self.game.player_group, 'l', 125, False)
+        else:
+            Melee_attack(self.game, int(self.hit_rect.center[0])-90, int(self.pos.y)+130, 250, 120, self.game.player_group, 'r', 125, False)
+
+    def hurt(self):
+        #self.invincible = True
+        self.current_action = 0
+        self.current_sprite = -1
+        
+    def animations(self):
+        now = pygame.time.get_ticks()
+        sprites_list = self.sprites
+        if self.face_left:
+            sprites_list = self.mirrored_sprites
+        if self.current_action == 0:        #idle
+            if now - self.last_sprite_time >= 200:
+                self.current_sprite += 1
+                if self.current_sprite > len(sprites_list[self.current_action])-1:
+                    self.current_sprite = 0
+                self.image = sprites_list[self.current_action][self.current_sprite]
+                self.last_sprite_time = pygame.time.get_ticks()
+        elif self.current_action == 1:      #walking
+            if now - self.last_sprite_time >= self.attack_speed:
+                self.current_sprite += 1
+                if self.current_sprite > len(sprites_list[self.current_action])-1:
+                    self.current_sprite = 0
+                self.image = sprites_list[self.current_action][self.current_sprite]
+                self.last_sprite_time = pygame.time.get_ticks()
+        elif self.current_action == 2:      #running
+            if now - self.last_sprite_time >= self.attack_speed:
+                self.current_sprite += 1
+                if self.current_sprite > len(sprites_list[self.current_action])-1:
+                    self.current_sprite = 0
+                self.image = sprites_list[self.current_action][self.current_sprite]
+                self.last_sprite_time = pygame.time.get_ticks()
+        elif self.current_action == 3:      #jumping
+            if now - self.last_sprite_time >= self.attack_speed:
+                self.current_sprite += 1
+                if self.current_sprite > len(sprites_list[self.current_action])-1:
+                    self.current_sprite = 0
+                    self.current_action = 2
+                self.image = sprites_list[self.current_action][self.current_sprite]
+                self.last_sprite_time = pygame.time.get_ticks()
+
+    def update(self):
+        self.movements()
+        self.acc.x += self.vel.x*FRICTION
+        self.vel += self.acc
+        self.vel.y = min(self.vel.y, 15)        #termial velocity
+        self.pos += self.vel + 0.5 * self.acc
+        self.hit_rect.x = int(self.pos.x)
+        wall_collisions(self, 'x')
+        self.hit_rect.y = int(self.pos.y)
+        wall_collisions(self, 'y')
+        self.rect.midtop = (self.hit_rect.midtop[0], self.hit_rect.midtop[1]-20)
+        if abs(self.vel.x) < 0.2:
+            self.vel.x = 0
+        if self.current_action not in [1, 2, 3]:
+            self.current_action = 0
+        if self.health <= 0:
+            self.kill()
+        self.animations()
         
         
         
@@ -872,6 +993,8 @@ class Game():
                 Slime(self, tile_object.x, tile_object.y)
             if tile_object.name == 'demon':
                 self.demon = Demon(self, tile_object.x, tile_object.y)
+            if tile_object.name == 'hell_hound':
+                Hell_hound(self, tile_object.x, tile_object.y)
             if tile_object.name == 'ladder':
                 Ladder(self, tile_object.x, tile_object.y, tile_object.width, tile_object.height)
             if tile_object.name == 'water':
@@ -956,7 +1079,7 @@ class Game():
             counter += 1
 
     def draw_texts(self):
-        string = 'Player health:' + str(self.player.health) + '\nPlayer Air:' + str(self.player.air)
+        string = 'Player health:' + str(self.player.health) + '\nPlayer Air:' + str(self.player.air//10)
         try:
             string += '\nDemon health: ' + str(self.demon.health)
         except:
