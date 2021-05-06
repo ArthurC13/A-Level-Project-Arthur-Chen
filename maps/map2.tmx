@@ -199,8 +199,8 @@
   <object id="72" name="wall" x="3776" y="1536" width="64" height="64"/>
   <object id="73" name="ladder" x="2056" y="952" width="16" height="200"/>
   <object id="74" name="wall" x="128" y="1696" width="32" height="8"/>
-  <object id="75" name="hell_hound" x="448" y="848" width="16" height="16"/>
-  <object id="76" name="slime" x="1016" y="832" width="16" height="16"/>
+  <object id="75" name="slime" x="648" y="840" width="16" height="16"/>
+  <object id="76" name="slime" x="392" y="808" width="16" height="16"/>
   <object id="77" name="slime" x="1208" y="824" width="16" height="16"/>
   <object id="78" name="slime" x="1544" y="208" width="16" height="16"/>
   <object id="79" name="slime" x="1968" y="424" width="16" height="16"/>
