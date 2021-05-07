@@ -352,7 +352,7 @@ class Player(pygame.sprite.Sprite):
         if self.health <= 0 and self.current_action != 6:
             self.current_action = 6
             self.current_sprite = -1
-        if self.pos.y > self.game.map.height + 5000:
+        if self.pos.y > self.game.map.height + 3000:
             self.kill()
             self.game.game_over()
         self.animations()
@@ -388,7 +388,7 @@ class Slime(pygame.sprite.Sprite):
         self.acc = pygame.math.Vector2(0, 0)
         self.last_attack = pygame.time.get_ticks()
         self.attack_rate = 2000
-        self.health = 1
+        self.health = 5
         self.invincible = False
 
     def movements(self):
@@ -506,6 +506,8 @@ class Slime(pygame.sprite.Sprite):
         if self.health <= 0 and self.current_action != 3:
             self.current_action = 3
             self.current_sprite = -1
+        if self.pos.y > self.game.map.height + 3000:
+            self.kill()
         self.animations()
 
 #demon class
@@ -664,6 +666,8 @@ class Demon(pygame.sprite.Sprite):
         if self.health <= 0 and self.current_action != 3:
             self.current_action = 3
             self.current_sprite = -1
+        if self.pos.y > self.game.map.height + 3000:
+            self.kill()
         self.animations()
 
 #Nightmare class
@@ -786,6 +790,8 @@ class Hell_hound(pygame.sprite.Sprite):
         if self.current_action not in [1, 2, 3]:
             self.current_action = 0
         if self.health <= 0:
+            self.kill()
+        if self.pos.y > self.game.map.height + 3000:
             self.kill()
         self.animations()
         
