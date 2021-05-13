@@ -241,11 +241,12 @@ class Player(pygame.sprite.Sprite):
         self.invincible = True
 
     def air_check(self, water):
-        if self.rect.top > water.rect.top:
+        if self.rect.top > water.rect.top and self.air > 0:
             self.air -= 1.4
             if self.air <= 0 and self.current_action != 6:
                 self.current_action = 6
                 self.current_sprite = -1
+                self.air = 0
 
     def animations(self):
         now = pygame.time.get_ticks()
