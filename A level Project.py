@@ -957,7 +957,7 @@ class Melee_attack(pygame.sprite.Sprite):
         self.groups = game.all_sprites_group, game.melee_attack_group
         pygame.sprite.Sprite.__init__(self, self.groups)
         self.game = game
-        self.image = pygame.Surface((w, h))
+        self.image = pygame.Surface((w, h), pygame.SRCALPHA)
         if self.game.show_hit_rect:
             self.image.fill(RED)
         self.rect = self.image.get_rect()
@@ -1205,6 +1205,8 @@ class Game():
             self.blit_texts(string, WHITE, 384, 64, 32, self.myfont)
         else:
             self.blit_texts(string, RED, 384, 64, 32, self.myfont)
+        string = 'Enemies remaining:' + str(len(game.enemy_group.sprites()))
+        self.blit_texts(string, WHITE, 384, 96, 32, self.myfont)
         '''
         try:
             string += '\nDemon health: ' + str(self.demon.health)
