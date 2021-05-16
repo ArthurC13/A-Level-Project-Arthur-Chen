@@ -187,7 +187,7 @@
   <object id="55" name="wall" x="3456" y="0" width="32" height="128"/>
   <object id="56" name="wall" x="3712" y="0" width="32" height="128"/>
   <object id="57" name="wall" x="3296" y="1920" width="928" height="32"/>
-  <object id="58" name="door" x="4448" y="1472" width="64" height="64"/>
+  <object id="58" name="door" x="4448" y="1456" width="70" height="80"/>
   <object id="59" name="wall" x="3936" y="1536" width="32" height="128"/>
   <object id="60" name="wall" x="3968" y="1632" width="256" height="32"/>
   <object id="61" name="wall" x="2240" y="1376" width="32" height="8"/>

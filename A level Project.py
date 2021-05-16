@@ -150,8 +150,6 @@ class Player(pygame.sprite.Sprite):
                 self.vel.y = -LADDERVEL
             if keys[pygame.K_DOWN]:
                 self.vel.y = LADDERVEL
-                if on_floor(self):
-                    self.interact()
         elif water:
             self.air_check(water[0])
             self.acc.y = 0
@@ -166,21 +164,6 @@ class Player(pygame.sprite.Sprite):
                 self.vel.y = -WATERVEL
             if keys[pygame.K_DOWN]:
                 self.vel.y = WATERVEL
-                if on_floor(self):
-                    self.interact()
-        else:
-            if self.air <= 1000:
-                self.air += 2
-            if keys[pygame.K_LEFT]:
-                self.acc.x = -PLAYERACC
-                self.face_left = True
-            if keys[pygame.K_RIGHT]:
-                self.acc.x = PLAYERACC
-                self.face_left = False
-            if keys[pygame.K_UP]:
-                self.jump()
-            if keys[pygame.K_DOWN]:
-                self.interact()
             if keys[pygame.K_z]:
                 now = pygame.time.get_ticks()
                 if self.current_action not in [4, 5, 6] and now - self.last_attack >= self.attack_cooldown:
@@ -192,6 +175,30 @@ class Player(pygame.sprite.Sprite):
                         self.last_attack = pygame.time.get_ticks()
                         self.current_action = 7
                         self.current_sprite = -1
+        else:
+            if self.air <= 1000:
+                self.air += 2
+            if keys[pygame.K_LEFT]:
+                self.acc.x = -PLAYERACC
+                self.face_left = True
+            if keys[pygame.K_RIGHT]:
+                self.acc.x = PLAYERACC
+                self.face_left = False
+            if keys[pygame.K_UP]:
+                self.jump()
+            if keys[pygame.K_z]:
+                now = pygame.time.get_ticks()
+                if self.current_action not in [4, 5, 6] and now - self.last_attack >= self.attack_cooldown:
+                    if on_floor(self):
+                        self.last_attack = pygame.time.get_ticks()
+                        self.current_action = 4
+                        self.current_sprite = -1
+                    else:
+                        self.last_attack = pygame.time.get_ticks()
+                        self.current_action = 7
+                        self.current_sprite = -1
+        if keys[pygame.K_x]:
+            self.interact()
                         
     def jump(self):
         hits = on_floor(self)
@@ -415,6 +422,16 @@ class Slime(pygame.sprite.Sprite):
                 self.current_action = 2
                 self.current_sprite = -1
                 self.last_attack = pygame.time.get_ticks()
+        water = pygame.sprite.spritecollide(self, game.water_group, False, collide_hit_rect)
+        if water:
+            self.acc.y = 0
+            if abs(self.hit_rect.center[0] - game.player.hit_rect.center[0]) < 400 and abs(self.hit_rect.center[1] - game.player.hit_rect.center[1]) < 60:
+                if (self.hit_rect.center[1] - game.player.hit_rect.center[1]) > 0:
+                    self.vel.y = -1
+                elif self.rect.top > water[0].rect.top:
+                    self.vel.y = 1
+            elif self.rect.top > water[0].rect.top:
+                self.vel.y = -1
 
     def attack(self):
         if self.face_left:
@@ -930,8 +947,8 @@ class Door(pygame.sprite.Sprite):
         self.groups = game.all_sprites_group, game.door_group
         pygame.sprite.Sprite.__init__(self, self.groups)
         self.game = game
-        self.closed = pygame.image.load('images/door/closed.png')
-        self.opened = pygame.image.load('images/door/open.png')
+        self.closed = pygame.transform.scale(pygame.image.load('images/door/closed.png'), (70,80))
+        self.opened = pygame.transform.scale(pygame.image.load('images/door/open.png'), (70,80))
         self.image = self.closed
         self.rect = self.image.get_rect()
         self.hit_rect = self.rect
@@ -1220,7 +1237,7 @@ class Game():
             string += '\nPlayer Acc: ' + str(self.player.acc) + '\nPlayer Vel: ' + str(self.player.vel)
             string += '\nPlayer Dmg: ' + str(self.player.attack_dmg)
             string += '\nFPS: ' + "{:.2f}".format(self.clock.get_fps())
-            self.blit_texts(string, WHITE, 640, 32, 32, self.myfont)
+            self.blit_texts(string, WHITE, 704, 32, 32, self.myfont)
 
     def draw(self):
         self.screen.blit(self.map_img, self.camera.apply_rect(self.map_rect))
