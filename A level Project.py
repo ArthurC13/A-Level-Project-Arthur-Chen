@@ -96,7 +96,7 @@ def last_enemy(x, y, direction):
 
 #Player class
 class Player(pygame.sprite.Sprite):
-    def __init__(self, game, x, y, health):
+    def __init__(self, game, x, y, health, dmg):
         self.groups = game.player_group
         pygame.sprite.Sprite.__init__(self, self.groups)
         self.game = game
@@ -121,7 +121,7 @@ class Player(pygame.sprite.Sprite):
         self.rect = self.image.get_rect()
         self.hit_rect = pygame.Rect(0, 0, 30, 60)
         self.hit_rect.center = self.rect.center
-        self.pos = pygame.math.Vector2(x, y)
+        self.pos = pygame.math.Vector2(int(x), int(y))
         self.vel = pygame.math.Vector2(0, 0)
         self.acc = pygame.math.Vector2(0, 0)
         self.health = health
@@ -129,7 +129,7 @@ class Player(pygame.sprite.Sprite):
         self.attack_cooldown = 1000
         self.invincible = False
         self.air = 1000
-        self.attack_dmg = 1
+        self.attack_dmg = dmg
         self.items = []
 
     def movement_controls(self):
@@ -362,7 +362,7 @@ class Player(pygame.sprite.Sprite):
         if self.health <= 0 and self.current_action != 6:
             self.current_action = 6
             self.current_sprite = -1
-        if self.pos.y > self.game.map.height + 3000:
+        if self.pos.y > self.game.map.height + 2000:
             self.kill()
             self.game.game_over()
         self.animations()
@@ -527,7 +527,7 @@ class Slime(pygame.sprite.Sprite):
         if self.health <= 0 and self.current_action != 3:
             self.current_action = 3
             self.current_sprite = -1
-        if self.pos.y > self.game.map.height + 3000:
+        if self.pos.y > self.game.map.height + 2000:
             self.kill()
         self.animations()
 
@@ -589,7 +589,7 @@ class Demon(pygame.sprite.Sprite):
                 self.current_action = 1
                 self.current_sprite = -1
                 self.last_attack = pygame.time.get_ticks()
-        elif self.berserking and self.current_action != 3:
+        elif self.berserking and self.current_action != 3 and game.player.health > 0:
             if self.hit_rect.center[0] > game.player.hit_rect.center[0]:
                 self.acc.x = -self.movement_speed/3
                 self.face_left = False
@@ -702,7 +702,7 @@ class Demon(pygame.sprite.Sprite):
         if self.health <= 0 and self.current_action != 3:
             self.current_action = 3
             self.current_sprite = -1
-        if self.pos.y > self.game.map.height + 3000:
+        if self.pos.y > self.game.map.height + 2000:
             self.kill()
         self.animations()
 
@@ -828,7 +828,7 @@ class Hell_hound(pygame.sprite.Sprite):
             self.current_action = 0
         if self.health <= 0:
             self.kill()
-        if self.pos.y > self.game.map.height + 3000:
+        if self.pos.y > self.game.map.height + 2000:
             self.kill()
         self.animations()
         
@@ -1100,6 +1100,7 @@ class Game():
     def new_game(self):
         self.level = LEVEL
         self.player_health = HEALTH
+        self.player_dmg = 2 - self.difficulty
         self.next_level()
         
     def next_level(self):
@@ -1117,7 +1118,7 @@ class Game():
         self.map_rect = self.map_img.get_rect()
         for tile_object in self.map.tmxdata.objects:
             if tile_object.name == 'player':
-                self.player = Player(self, tile_object.x, tile_object.y, self.player_health)
+                self.player = Player(self, tile_object.x, tile_object.y, self.player_health, self.player_dmg)
             if tile_object.name == 'slime':
                 Slime(self, tile_object.x, tile_object.y)
             if tile_object.name == 'demon':
@@ -1161,6 +1162,7 @@ class Game():
             while self.wait:
                 self.dt = self.clock.tick(FPS)/1000
                 self.events()
+                self.draw_menu()
             self.new_game()
 
     def events(self):
@@ -1193,9 +1195,19 @@ class Game():
                     if event.key == pygame.K_ESCAPE:
                         self.pause_game()
                 elif self.mode == 'death screen':
-                    self.wait = False
+                    if event.key == pygame.K_z:
+                        self.wait = False
                 elif self.mode == 'home screen':
-                    self.wait = False
+                    if event.key == pygame.K_z:
+                        self.wait = False
+                    if event.key == pygame.K_LEFT:
+                        self.difficulty -= 1
+                        if self.difficulty < -3:
+                            self.difficulty = 1
+                    if event.key == pygame.K_RIGHT:
+                        self.difficulty += 1
+                        if self.difficulty > 1:
+                            self.difficulty = -3
 
     def update(self):
         self.all_sprites_group.update()
@@ -1257,6 +1269,12 @@ class Game():
             for i in self.item_group:
                 pygame.draw.rect(self.screen, LIGHTBLUE, self.camera.apply_rect(i.hit_rect), 2)
         self.draw_texts()
+        if self.mode == 'pause':
+            self.dimm_screen()
+            self.blit_texts('Game Paused\nPress Esc to continue', WHITE, 256, 256, 32, self.myfont)
+        elif self.mode == 'death screen':
+            self.dimm_screen()
+            self.blit_texts('Game Over\nPress z to restart', WHITE, 256, 256, 32, self.myfont)
         pygame.display.flip()
 
     def show_grid_lines(self):
@@ -1265,12 +1283,61 @@ class Game():
         for y in range(0, HEIGHT, TILESIZE):
             pygame.draw.line(self.screen, LIGHTBLUE, (0, y), (WIDTH, y))
 
+    def dimm_screen(self):
+        rectangle = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
+        rectangle.set_alpha(200)
+        rectangle.fill(BLACK)
+        self.screen.blit(rectangle, (0,0))
+
     def home_screen(self):
+        self.level = -1
+        self.player_health = HEALTH
+        self.player_dmg = 1
+        self.next_level()
         self.mode = 'home screen'
-        string = 'Press any key to start'
-        self.blit_texts(string, WHITE, 380, 384, 32, self.myfont)
-        pygame.display.flip()
+        self.difficulty = 0
         self.wait_loop()
+
+    def change_difficulty(self):
+        if self.difficulty == 0:
+            self.difficulty_text = 'Normal'
+            self.difficulty_colour = BLUE
+        if self.difficulty == -1:
+            self.difficulty_text = 'Easy'
+            self.difficulty_colour = GREEN
+        if self.difficulty == -2:
+            self.difficulty_text = 'Super Easy'
+            self.difficulty_colour = YELLOW
+        if self.difficulty == -3:
+            self.difficulty_text = 'Ultra Easy'
+            self.difficulty_colour = PINK
+        if self.difficulty == 1:
+            self.difficulty_text = 'Hard'
+            self.difficulty_colour = RED
+
+    def draw_menu(self):
+        self.screen.blit(self.map_img, (0,0))
+        string = 'Press z to start\nUse left and right arrow key to choose game difficulty\nDifficulty:'
+        self.blit_texts(string, WHITE, 128, 128, 64, self.myfont)
+        self.change_difficulty()
+        self.blit_texts(self.difficulty_text, self.difficulty_colour, 288, 256, 64, self.myfont)
+        text = ''' 
+Game Controlls:
+Arrow Keys to move around
+Z key to attack
+X Key to interact with objects
+ 
+Game Objective:
+Clear all enemies, find the key
+and enter next stage
+ '''
+        self.blit_texts(text, WHITE, 128, 288, 32, self.myfont)
+        self.player.animations()
+        for i in self.enemy_group:
+            i.animations()
+            self.screen.blit(i.image, (710,660))
+        self.screen.blit(self.player.image, (410,637))
+        pygame.display.flip()
 
     def game_over(self):
         self.done = True
