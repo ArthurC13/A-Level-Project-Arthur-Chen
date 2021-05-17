@@ -1318,15 +1318,16 @@ class Game():
 
     def draw_menu(self):
         self.screen.blit(self.map_img, (0,0))
-        string = 'Press z to start\nUse left and right arrow key to choose game difficulty\nDifficulty:'
+        string = 'Use left and right arrow key to choose game difficulty\nDifficulty:\nPress z to start'
         self.blit_texts(string, WHITE, 128, 128, 64, self.myfont)
         self.change_difficulty()
-        self.blit_texts(self.difficulty_text, self.difficulty_colour, 288, 256, 64, self.myfont)
+        self.blit_texts(self.difficulty_text, self.difficulty_colour, 288, 192, 64, self.myfont)
         text = ''' 
 Game Controlls:
 Arrow Keys to move around
 Z key to attack
 X Key to interact with objects
+Esc key to pause
  
 Game Objective:
 Clear all enemies, find the key
