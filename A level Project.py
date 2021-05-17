@@ -1157,7 +1157,6 @@ class Game():
                 self.events()
                 self.update()
                 self.draw()
-            self.new_game()
         elif self.mode == 'home screen':
             while self.wait:
                 self.dt = self.clock.tick(FPS)/1000
@@ -1197,6 +1196,10 @@ class Game():
                 elif self.mode == 'death screen':
                     if event.key == pygame.K_z:
                         self.wait = False
+                        self.new_game()
+                    if event.key == pygame.K_x:
+                        self.wait = False
+                        self.home_screen()
                 elif self.mode == 'home screen':
                     if event.key == pygame.K_z:
                         self.wait = False
@@ -1274,7 +1277,7 @@ class Game():
             self.blit_texts('Game Paused\nPress Esc to continue', WHITE, 256, 256, 32, self.myfont)
         elif self.mode == 'death screen':
             self.dimm_screen()
-            self.blit_texts('Game Over\nPress z to restart', WHITE, 256, 256, 32, self.myfont)
+            self.blit_texts('Game Over\nPress z to restart\nPress x to return to start screen', WHITE, 256, 256, 32, self.myfont)
         pygame.display.flip()
 
     def show_grid_lines(self):
