@@ -1191,8 +1191,11 @@ class Game():
                     if event.key == pygame.K_MINUS:
                         self.player.attack_dmg -= 1
                 elif self.mode == 'pause':
-                    if event.key == pygame.K_ESCAPE:
+                    if event.key in [pygame.K_ESCAPE, pygame.K_z]:
                         self.pause_game()
+                    if event.key == pygame.K_x:
+                        self.wait = False
+                        self.home_screen()
                 elif self.mode == 'death screen':
                     if event.key == pygame.K_z:
                         self.wait = False
@@ -1240,12 +1243,6 @@ class Game():
             self.blit_texts(string, RED, 384, 64, 32, self.myfont)
         string = 'Enemies remaining:' + str(len(game.enemy_group.sprites()))
         self.blit_texts(string, WHITE, 384, 96, 32, self.myfont)
-        '''
-        try:
-            string += '\nDemon health: ' + str(self.demon.health)
-        except:
-            pass
-        '''
         if self.show_stats:
             string = 'Camera Offset x: ' + str(self.camera.x) + '\nCamera Offset y: ' + str(self.camera.y)
             string += '\nPlayer x: ' + str(self.player.rect.x) + '\nPlayer y: ' + str(self.player.rect.y)
@@ -1274,7 +1271,7 @@ class Game():
         self.draw_texts()
         if self.mode == 'pause':
             self.dimm_screen()
-            self.blit_texts('Game Paused\nPress Esc to continue', WHITE, 256, 256, 32, self.myfont)
+            self.blit_texts('Game Paused\nPress Esc or z to continue\nPress x to return to home screen', WHITE, 256, 256, 32, self.myfont)
         elif self.mode == 'death screen':
             self.dimm_screen()
             self.blit_texts('Game Over\nPress z to restart\nPress x to return to start screen', WHITE, 256, 256, 32, self.myfont)
