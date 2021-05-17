@@ -11,13 +11,9 @@ BLACK = (0,0,0)
 WHITE = (255,255,255)
 BLUE = (50,50,255)
 GREEN = (0, 255, 0)
-DARKGREEN = (0, 100, 0)
 RED = (255, 0, 0)
 YELLOW = (255,255,0)
-PURPLE = (103,13,173)
 PINK = (255,192,203)
-LIGHTBLUE = (209, 237, 242)
-BRIGHTBLUE = (15, 137, 202)
 NIGHTBLUE = (34, 36, 64)
 
 # -- Game settings
@@ -36,17 +32,20 @@ TILESIZE = 32
 GRIDWIDTH = WIDTH/TILESIZE
 GRIDHEIGHT = HEIGHT/TILESIZE
 
+# -- Player settings
 PLAYERACC = 0.9
 JUMPVEL = -9.5
 LADDERVEL = 4
 WATERVEL = 2.5
+HEALTH = 20
+
+# -- Physics settings
 FRICTION = -0.15
 GRAVITY = 0.3
 KNOCKBACK = 15
 
+# -- Map and Camera settings
 LEVEL = 0
-HEALTH = 15
-
 CAMERALAG = 25
 
 # -- Sprites Classes
@@ -1104,7 +1103,7 @@ class Game():
     def new_game(self):
         self.level = LEVEL
         self.player_health = HEALTH + self.difficulty * -5
-        self.player_dmg = 2 - self.difficulty
+        self.player_dmg = 3 - self.difficulty
         self.next_level()
         
     def next_level(self):
@@ -1212,12 +1211,12 @@ class Game():
                         self.wait = False
                     if event.key == pygame.K_LEFT:
                         self.difficulty -= 1
-                        if self.difficulty < -3:
-                            self.difficulty = 1
+                        if self.difficulty < -2:
+                            self.difficulty = 2
                     if event.key == pygame.K_RIGHT:
                         self.difficulty += 1
-                        if self.difficulty > 1:
-                            self.difficulty = -3
+                        if self.difficulty > 2:
+                            self.difficulty = -2
 
     def update(self):
         self.all_sprites_group.update()
@@ -1267,11 +1266,11 @@ class Game():
         for i in self.item_group:
             self.screen.blit(i.image, self.camera.apply(i))
         if self.show_hit_rect:
-            pygame.draw.rect(self.screen, LIGHTBLUE, self.camera.apply_rect(self.player.hit_rect), 2)
+            pygame.draw.rect(self.screen, WHITE, self.camera.apply_rect(self.player.hit_rect), 2)
             for i in self.enemy_group:
-                pygame.draw.rect(self.screen, LIGHTBLUE, self.camera.apply_rect(i.hit_rect), 2)
+                pygame.draw.rect(self.screen, WHITE, self.camera.apply_rect(i.hit_rect), 2)
             for i in self.item_group:
-                pygame.draw.rect(self.screen, LIGHTBLUE, self.camera.apply_rect(i.hit_rect), 2)
+                pygame.draw.rect(self.screen, WHITE, self.camera.apply_rect(i.hit_rect), 2)
         self.draw_texts()
         if self.mode == 'pause':
             self.dimm_screen()
@@ -1283,9 +1282,9 @@ class Game():
 
     def show_grid_lines(self):
         for x in range(0, WIDTH, TILESIZE):
-            pygame.draw.line(self.screen, LIGHTBLUE, (x, 0), (x, HEIGHT))
+            pygame.draw.line(self.screen, WHITE, (x, 0), (x, HEIGHT))
         for y in range(0, HEIGHT, TILESIZE):
-            pygame.draw.line(self.screen, LIGHTBLUE, (0, y), (WIDTH, y))
+            pygame.draw.line(self.screen, WHITE, (0, y), (WIDTH, y))
 
     def dimm_screen(self):
         rectangle = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
@@ -1299,23 +1298,23 @@ class Game():
         self.player_dmg = 1
         self.next_level()
         self.mode = 'home screen'
-        self.difficulty = -1
+        self.difficulty = 0
         self.wait_loop()
 
     def change_difficulty(self):
-        if self.difficulty == 0:
+        if self.difficulty == 1:
             self.difficulty_text = 'Hard'
             self.difficulty_colour = BLUE
-        if self.difficulty == -1:
+        if self.difficulty == 0:
             self.difficulty_text = 'Normal'
             self.difficulty_colour = GREEN
-        if self.difficulty == -2:
+        if self.difficulty == -1:
             self.difficulty_text = 'Easy'
             self.difficulty_colour = YELLOW
-        if self.difficulty == -3:
+        if self.difficulty == -2:
             self.difficulty_text = 'Super Easy'
             self.difficulty_colour = PINK
-        if self.difficulty == 1:
+        if self.difficulty == 2:
             self.difficulty_text = 'Super Hard'
             self.difficulty_colour = RED
 
