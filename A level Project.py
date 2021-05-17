@@ -212,7 +212,6 @@ class Player(pygame.sprite.Sprite):
         if hits and not hits2:
             self.vel.y = JUMPVEL
             self.current_sprite = -1
-            self.current_action = 2
 
     def attack(self):
         if self.face_left:
