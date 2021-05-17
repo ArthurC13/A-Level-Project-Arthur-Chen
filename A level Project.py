@@ -41,7 +41,7 @@ GRAVITY = 0.3
 KNOCKBACK = 15
 
 LEVEL = 0
-HEALTH = 10
+HEALTH = 15
 
 CAMERALAG = 25
 
@@ -208,6 +208,7 @@ class Player(pygame.sprite.Sprite):
         if hits and not hits2:
             self.vel.y = JUMPVEL
             self.current_sprite = -1
+            self.current_action = 2
 
     def attack(self):
         if self.face_left:
@@ -1099,7 +1100,7 @@ class Game():
 
     def new_game(self):
         self.level = LEVEL
-        self.player_health = HEALTH
+        self.player_health = HEALTH + self.difficulty * -5
         self.player_dmg = 2 - self.difficulty
         self.next_level()
         
@@ -1271,7 +1272,7 @@ class Game():
         self.draw_texts()
         if self.mode == 'pause':
             self.dimm_screen()
-            self.blit_texts('Game Paused\nPress Esc or z to continue\nPress x to return to home screen', WHITE, 256, 256, 32, self.myfont)
+            self.blit_texts('Game Paused\nPress Esc or z to continue\nPress x to return to start screen', WHITE, 256, 256, 32, self.myfont)
         elif self.mode == 'death screen':
             self.dimm_screen()
             self.blit_texts('Game Over\nPress z to restart\nPress x to return to start screen', WHITE, 256, 256, 32, self.myfont)
@@ -1295,24 +1296,24 @@ class Game():
         self.player_dmg = 1
         self.next_level()
         self.mode = 'home screen'
-        self.difficulty = 0
+        self.difficulty = -1
         self.wait_loop()
 
     def change_difficulty(self):
         if self.difficulty == 0:
-            self.difficulty_text = 'Normal'
+            self.difficulty_text = 'Hard'
             self.difficulty_colour = BLUE
         if self.difficulty == -1:
-            self.difficulty_text = 'Easy'
+            self.difficulty_text = 'Normal'
             self.difficulty_colour = GREEN
         if self.difficulty == -2:
-            self.difficulty_text = 'Super Easy'
+            self.difficulty_text = 'Easy'
             self.difficulty_colour = YELLOW
         if self.difficulty == -3:
-            self.difficulty_text = 'Ultra Easy'
+            self.difficulty_text = 'Super Easy'
             self.difficulty_colour = PINK
         if self.difficulty == 1:
-            self.difficulty_text = 'Hard'
+            self.difficulty_text = 'Super Hard'
             self.difficulty_colour = RED
 
     def draw_menu(self):

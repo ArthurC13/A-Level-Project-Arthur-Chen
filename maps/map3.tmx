@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.5" tiledversion="1.6.0" orientation="orthogonal" renderorder="right-down" width="200" height="100" tilewidth="32" tileheight="32" infinite="0" nextlayerid="4" nextobjectid="407">
+<map version="1.5" tiledversion="1.6.0" orientation="orthogonal" renderorder="right-down" width="200" height="100" tilewidth="32" tileheight="32" infinite="0" nextlayerid="4" nextobjectid="408">
  <tileset firstgid="1" source="cavesofgallet_tiles.tsx"/>
  <tileset firstgid="97" source="platformer_tiles.tsx"/>
  <layer id="1" name="Background" width="200" height="100">
@@ -353,7 +353,7 @@
   <object id="341" name="wall" x="5824" y="608" width="416" height="8"/>
   <object id="342" name="wall" x="5504" y="704" width="192" height="8"/>
   <object id="343" name="wall" x="5504" y="832" width="384" height="8"/>
-  <object id="344" name="wall" x="5472" y="608" width="32" height="352"/>
+  <object id="344" name="wall" x="5472" y="608" width="32" height="96"/>
   <object id="345" name="wall" x="6240" y="352" width="32" height="608"/>
   <object id="346" name="wall" x="5504" y="960" width="736" height="32"/>
   <object id="347" name="ladder" x="5800" y="152" width="16" height="328"/>
@@ -415,5 +415,6 @@
   <object id="402" name="ladder" x="5768" y="1664" width="16" height="192"/>
   <object id="405" name="wall" x="5600" y="1568" width="32" height="8"/>
   <object id="406" name="player" x="1096" y="1288" width="16" height="16"/>
+  <object id="407" name="wall" x="5472" y="840" width="32" height="120"/>
  </objectgroup>
 </map>
