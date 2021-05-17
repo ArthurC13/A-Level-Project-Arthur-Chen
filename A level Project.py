@@ -21,8 +21,12 @@ BRIGHTBLUE = (15, 137, 202)
 NIGHTBLUE = (34, 36, 64)
 
 # -- Game settings
-WIDTH = 1024        #32*32
-HEIGHT = 768        #24*32
+if sys.platform == 'darwin':
+    WIDTH = 1024        #32*32
+    HEIGHT = 768        #24*32
+else:
+    WIDTH = 960        #30*32
+    HEIGHT = 640        #20*32
 FPS = 60
 GAMETITLE = 'A Level Project'
 
@@ -1317,11 +1321,12 @@ class Game():
             self.difficulty_colour = RED
 
     def draw_menu(self):
-        self.screen.blit(self.map_img, (0,0))
+        displacement = HEIGHT - self.map.height
+        self.screen.blit(self.map_img, (0,0 + displacement))
         string = 'Use left and right arrow key to choose game difficulty\nDifficulty:\nPress z to start'
-        self.blit_texts(string, WHITE, 128, 128, 64, self.myfont)
+        self.blit_texts(string, WHITE, 128, 128 + displacement, 64, self.myfont)
         self.change_difficulty()
-        self.blit_texts(self.difficulty_text, self.difficulty_colour, 288, 192, 64, self.myfont)
+        self.blit_texts(self.difficulty_text, self.difficulty_colour, 288, 192 + displacement, 64, self.myfont)
         text = ''' 
 Game Controlls:
 Arrow Keys to move around
@@ -1333,12 +1338,12 @@ Game Objective:
 Clear all enemies, find the key
 and enter next stage
  '''
-        self.blit_texts(text, WHITE, 128, 288, 32, self.myfont)
+        self.blit_texts(text, WHITE, 128, 288 + displacement, 32, self.myfont)
         self.player.animations()
         for i in self.enemy_group:
             i.animations()
-            self.screen.blit(i.image, (710,660))
-        self.screen.blit(self.player.image, (410,637))
+            self.screen.blit(i.image, (710,660 + displacement))
+        self.screen.blit(self.player.image, (410,637 + displacement))
         pygame.display.flip()
 
     def game_over(self):
