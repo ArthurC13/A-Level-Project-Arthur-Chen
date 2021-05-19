@@ -1081,6 +1081,7 @@ class Game():
         pygame.key.set_repeat(100, 50)
         self.myfont = pygame.font.Font('fonts/m5x7.ttf', 40)
         self.tools_reset()
+        self.start_time = pygame.time.get_ticks()
 
     def sprite_group_reset(self):
         self.all_sprites_group = pygame.sprite.Group()
@@ -1108,7 +1109,9 @@ class Game():
         
     def next_level(self):
         self.sprite_group_reset()
+        print("Level",self.level,"completion time:",(pygame.time.get_ticks()-self.start_time)/1000, "seconds")
         self.level += 1
+        self.start_time = pygame.time.get_ticks()
         try:
             self.load_map(self.level)
         except:
@@ -1172,7 +1175,7 @@ class Game():
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 self.exit_game()
-            if event.type == pygame.KEYUP:
+            if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_0:
                     self.tools_reset()
                 if event.key == pygame.K_1:
@@ -1234,25 +1237,30 @@ class Game():
             counter += 1
 
     def draw_texts(self):
+        now = pygame.time.get_ticks()
+        time_taken = now - self.start_time
+        self.blit_texts(str(time_taken//1000), WHITE, WIDTH-96, 32, 32, self.myfont)
+        self.blit_texts('Game Mode: ', WHITE, 96, 32, 32, self.myfont)
+        self.blit_texts(self.difficulty_text, self.difficulty_colour, 256, 32, 32, self.myfont)
         string = 'Player health:' + str(self.player.health)
         if self.player.health >= 4:
-            self.blit_texts(string, WHITE, 384, 32, 32, self.myfont)
+            self.blit_texts(string, WHITE, 96, 64, 32, self.myfont)
         else:
-            self.blit_texts(string, RED, 384, 32, 32, self.myfont)
+            self.blit_texts(string, RED, 96, 64, 32, self.myfont)
         string = 'Player Air:' + str(int(self.player.air//10))
         if self.player.air >= 300:
-            self.blit_texts(string, WHITE, 384, 64, 32, self.myfont)
+            self.blit_texts(string, WHITE, 96, 96, 32, self.myfont)
         else:
-            self.blit_texts(string, RED, 384, 64, 32, self.myfont)
+            self.blit_texts(string, RED, 96, 96, 32, self.myfont)
         string = 'Enemies remaining:' + str(len(game.enemy_group.sprites()))
-        self.blit_texts(string, WHITE, 384, 96, 32, self.myfont)
+        self.blit_texts(string, WHITE, 96, 128, 32, self.myfont)
         if self.show_stats:
             string = 'Camera Offset x: ' + str(self.camera.x) + '\nCamera Offset y: ' + str(self.camera.y)
             string += '\nPlayer x: ' + str(self.player.rect.x) + '\nPlayer y: ' + str(self.player.rect.y)
             string += '\nPlayer Acc: ' + str(self.player.acc) + '\nPlayer Vel: ' + str(self.player.vel)
             string += '\nPlayer Dmg: ' + str(self.player.attack_dmg)
             string += '\nFPS: ' + "{:.2f}".format(self.clock.get_fps())
-            self.blit_texts(string, WHITE, 704, 32, 32, self.myfont)
+            self.blit_texts(string, WHITE, 640, 32, 32, self.myfont)
 
     def draw(self):
         self.screen.blit(self.map_img, self.camera.apply_rect(self.map_rect))
