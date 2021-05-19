@@ -1175,7 +1175,7 @@ class Game():
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 self.exit_game()
-            if event.type == pygame.KEYDOWN:
+            if event.type == pygame.KEYUP:
                 if event.key == pygame.K_0:
                     self.tools_reset()
                 if event.key == pygame.K_1:
