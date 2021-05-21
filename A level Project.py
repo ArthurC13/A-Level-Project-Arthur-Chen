@@ -170,6 +170,7 @@ class Player(pygame.sprite.Sprite):
             if keys[pygame.K_z]:
                 now = pygame.time.get_ticks()
                 if self.current_action not in [4, 5, 6] and now - self.last_attack >= self.attack_cooldown:
+                    self.game.attacks_made += 1
                     if on_floor(self):
                         self.last_attack = pygame.time.get_ticks()
                         self.current_action = 4
@@ -192,6 +193,7 @@ class Player(pygame.sprite.Sprite):
             if keys[pygame.K_z]:
                 now = pygame.time.get_ticks()
                 if self.current_action not in [4, 5, 6] and now - self.last_attack >= self.attack_cooldown:
+                    self.game.attacks_made += 1
                     if on_floor(self):
                         self.last_attack = pygame.time.get_ticks()
                         self.current_action = 4
@@ -248,6 +250,7 @@ class Player(pygame.sprite.Sprite):
     def hurt(self):
         self.current_action = 5
         self.current_sprite = -1
+        self.game.hits_taken += 1
         self.invincible = True
 
     def air_check(self, water):
@@ -1102,21 +1105,28 @@ class Game():
         self.show_hit_rect = False
 
     def new_game(self):
+        self.variable_reset()
+        self.next_level()
+
+    def variable_reset(self):
         self.level = LEVEL
         self.player_health = HEALTH + self.difficulty * -5
         self.player_dmg = 3 - self.difficulty
-        self.next_level()
+        self.times = [0,0,0,0]
+        self.hits_taken = 0
+        self.attacks_made = 0
         
     def next_level(self):
         self.sprite_group_reset()
-        print("Level",self.level,"completion time:",(pygame.time.get_ticks()-self.start_time)/1000, "seconds")
+        time = (pygame.time.get_ticks()-self.start_time)/1000
+        print("Level",self.level,"completion time:",time, "seconds")
+        self.times[self.level] = time
         self.level += 1
         self.start_time = pygame.time.get_ticks()
-        try:
+        if self.level < 4:  #number of levels
             self.load_map(self.level)
-        except:
-            self.level = LEVEL + 1
-            self.load_map(self.level)
+        else:
+            self.game_complete()
 
     def load_map(self, level):
         self.map = TiledMap('maps/map'+str(level)+'.tmx')
@@ -1169,6 +1179,12 @@ class Game():
                 self.events()
                 self.draw_menu()
             self.new_game()
+        elif self.mode == 'end screen':
+            while self.wait:
+                self.dt = self.clock.tick(FPS)/1000
+                self.events()
+                self.draw()
+            self.home_screen()
 
     def events(self):
         # -- User input and controls
@@ -1220,6 +1236,11 @@ class Game():
                         self.difficulty += 1
                         if self.difficulty > 2:
                             self.difficulty = -2
+                elif self.mode == 'end screen':
+                    if event.key == pygame.K_z:
+                        self.wait = False
+                    if event.key == pygame.K_x:
+                        self.exit_game()
 
     def update(self):
         self.all_sprites_group.update()
@@ -1286,6 +1307,30 @@ class Game():
         elif self.mode == 'death screen':
             self.dimm_screen()
             self.blit_texts('Game Over\nPress z to restart\nPress x to return to start screen', WHITE, 256, 256, 32, self.myfont)
+        elif self.mode == 'end screen':
+            self.dimm_screen()
+            string = '''Game Completed!
+Thank you for playing!
+
+Statistics:
+Game Mode:
+Hits taken:
+Attacks made:
+Level 1 time:
+Level 2 time:
+Level 3 time:
+Secrets found:
+
+Press z to return to start screen
+Press x to quit'''
+            self.blit_texts(string, WHITE, 256, 192, 32, self.myfont)
+            self.blit_texts(self.difficulty_text, self.difficulty_colour, 480, 320, 32, self.myfont)
+            self.blit_texts(str(self.hits_taken), WHITE, 480, 352, 32, self.myfont)
+            self.blit_texts(str(self.attacks_made), WHITE, 480, 384, 32, self.myfont)
+            self.blit_texts(str(self.times[1]), WHITE, 480, 416, 32, self.myfont)
+            self.blit_texts(str(self.times[2]), WHITE, 480, 448, 32, self.myfont)
+            self.blit_texts(str(self.times[3]), WHITE, 480, 480, 32, self.myfont)
+            self.blit_texts(str(0)+'/3', WHITE, 480, 512, 32, self.myfont)
         pygame.display.flip()
 
     def show_grid_lines(self):
@@ -1301,12 +1346,13 @@ class Game():
         self.screen.blit(rectangle, (0,0))
 
     def home_screen(self):
+        self.difficulty = 0
         self.level = -1
         self.player_health = HEALTH
         self.player_dmg = 1
+        self.times = [0,0,0,0]
         self.next_level()
         self.mode = 'home screen'
-        self.difficulty = 0
         self.wait_loop()
 
     def change_difficulty(self):
@@ -1360,6 +1406,10 @@ and enter next stage
         self.done = not self.done
         self.wait = False
         self.mode = 'pause'
+
+    def game_complete(self):
+        self.mode = 'end screen'
+        self.done = True
             
     def exit_game(self):
         pygame.quit()
