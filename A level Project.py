@@ -1118,8 +1118,7 @@ class Game():
         
     def next_level(self):
         self.sprite_group_reset()
-        time = (pygame.time.get_ticks()-self.start_time)/1000
-        print("Level",self.level,"completion time:",time, "seconds")
+        time = (pygame.time.get_ticks()-self.start_time)//10/100
         self.times[self.level] = time
         self.level += 1
         self.start_time = pygame.time.get_ticks()
@@ -1219,10 +1218,10 @@ class Game():
                         self.wait = False
                         self.home_screen()
                 elif self.mode == 'death screen':
-                    if event.key == pygame.K_z:
+                    if event.key == pygame.K_n:
                         self.wait = False
                         self.new_game()
-                    if event.key == pygame.K_x:
+                    if event.key == pygame.K_m:
                         self.wait = False
                         self.home_screen()
                 elif self.mode == 'home screen':
@@ -1237,9 +1236,9 @@ class Game():
                         if self.difficulty > 2:
                             self.difficulty = -2
                 elif self.mode == 'end screen':
-                    if event.key == pygame.K_z:
+                    if event.key == pygame.K_n:
                         self.wait = False
-                    if event.key == pygame.K_x:
+                    if event.key == pygame.K_m:
                         self.exit_game()
 
     def update(self):
@@ -1258,30 +1257,62 @@ class Game():
             counter += 1
 
     def draw_texts(self):
+        offset = 768-HEIGHT
         now = pygame.time.get_ticks()
-        time_taken = now - self.start_time
-        self.blit_texts(str(time_taken//1000), WHITE, WIDTH-96, 32, 32, self.myfont)
-        self.blit_texts('Game Mode: ', WHITE, 96, 32, 32, self.myfont)
-        self.blit_texts(self.difficulty_text, self.difficulty_colour, 256, 32, 32, self.myfont)
-        string = 'Player health:' + str(self.player.health)
-        if self.player.health >= 4:
-            self.blit_texts(string, WHITE, 96, 64, 32, self.myfont)
-        else:
-            self.blit_texts(string, RED, 96, 64, 32, self.myfont)
-        string = 'Player Air:' + str(int(self.player.air//10))
-        if self.player.air >= 300:
-            self.blit_texts(string, WHITE, 96, 96, 32, self.myfont)
-        else:
-            self.blit_texts(string, RED, 96, 96, 32, self.myfont)
-        string = 'Enemies remaining:' + str(len(game.enemy_group.sprites()))
-        self.blit_texts(string, WHITE, 96, 128, 32, self.myfont)
+        time_taken = (now - self.start_time)//1000
+        if self.mode != 'end screen':
+            self.blit_texts('Time: ' + str(time_taken//60) + ' minutes ' + str(time_taken%60) + ' seconds', WHITE, WIDTH-416, 32, 32, self.myfont)
+            self.blit_texts('Game Mode: ', WHITE, 96, 32, 32, self.myfont)
+            self.blit_texts(self.difficulty_text, self.difficulty_colour, 256, 32, 32, self.myfont)
+            string = 'Player health: ' + str(self.player.health)
+            if self.player.health >= 4:
+                self.blit_texts(string, WHITE, 96, 64, 32, self.myfont)
+            else:
+                self.blit_texts(string, RED, 96, 64, 32, self.myfont)
+            string = 'Player Air: ' + str(int(self.player.air//10))
+            if self.player.air >= 300:
+                self.blit_texts(string, WHITE, 96, 96, 32, self.myfont)
+            else:
+                self.blit_texts(string, RED, 96, 96, 32, self.myfont)
+            string = 'Enemies remaining: ' + str(len(game.enemy_group.sprites()))
+            self.blit_texts(string, WHITE, 96, 128, 32, self.myfont)
         if self.show_stats:
             string = 'Camera Offset x: ' + str(self.camera.x) + '\nCamera Offset y: ' + str(self.camera.y)
             string += '\nPlayer x: ' + str(self.player.rect.x) + '\nPlayer y: ' + str(self.player.rect.y)
             string += '\nPlayer Acc: ' + str(self.player.acc) + '\nPlayer Vel: ' + str(self.player.vel)
             string += '\nPlayer Dmg: ' + str(self.player.attack_dmg)
             string += '\nFPS: ' + "{:.2f}".format(self.clock.get_fps())
-            self.blit_texts(string, WHITE, 640, 32, 32, self.myfont)
+            self.blit_texts(string, WHITE, WIDTH-416, 64, 32, self.myfont)
+        if self.mode == 'pause':
+            self.dimm_screen()
+            self.blit_texts('Game Paused\nPress Esc or z to continue\nPress x to return to start screen', WHITE, 256, 256, 32, self.myfont)
+        elif self.mode == 'death screen':
+            self.dimm_screen()
+            self.blit_texts('Game Over\nPress n to restart\nPress m to return to start screen', WHITE, 256, 256, 32, self.myfont)
+        elif self.mode == 'end screen':
+            self.dimm_screen()
+            string = '''Game Completed!
+Thank you for playing!
+
+Statistics:
+Game Mode:
+Hits taken:
+Attacks made:
+Level 1 time:
+Level 2 time:
+Level 3 time:
+Secrets found:
+
+Press n to return to start screen
+Press m to quit'''
+            self.blit_texts(string, WHITE, 256, 192-offset, 32, self.myfont)
+            self.blit_texts(self.difficulty_text, self.difficulty_colour, 480, 320-offset, 32, self.myfont)
+            self.blit_texts(str(self.hits_taken), WHITE, 480, 352-offset, 32, self.myfont)
+            self.blit_texts(str(self.attacks_made), WHITE, 480, 384-offset, 32, self.myfont)
+            self.blit_texts(str(self.times[1]//60) + ' minutes ' + str(self.times[1]%60) + ' seconds', WHITE, 480, 416-offset, 32, self.myfont)
+            self.blit_texts(str(self.times[2]//60) + ' minutes ' + str(self.times[2]%60) + ' seconds', WHITE, 480, 448-offset, 32, self.myfont)
+            self.blit_texts(str(self.times[3]//60) + ' minutes ' + str(self.times[3]%60) + ' seconds', WHITE, 480, 480-offset, 32, self.myfont)
+            self.blit_texts(str(0)+'/3', WHITE, 480, 512-offset, 32, self.myfont)
 
     def draw(self):
         self.screen.blit(self.map_img, self.camera.apply_rect(self.map_rect))
@@ -1301,36 +1332,6 @@ class Game():
             for i in self.item_group:
                 pygame.draw.rect(self.screen, WHITE, self.camera.apply_rect(i.hit_rect), 2)
         self.draw_texts()
-        if self.mode == 'pause':
-            self.dimm_screen()
-            self.blit_texts('Game Paused\nPress Esc or z to continue\nPress x to return to start screen', WHITE, 256, 256, 32, self.myfont)
-        elif self.mode == 'death screen':
-            self.dimm_screen()
-            self.blit_texts('Game Over\nPress z to restart\nPress x to return to start screen', WHITE, 256, 256, 32, self.myfont)
-        elif self.mode == 'end screen':
-            self.dimm_screen()
-            string = '''Game Completed!
-Thank you for playing!
-
-Statistics:
-Game Mode:
-Hits taken:
-Attacks made:
-Level 1 time:
-Level 2 time:
-Level 3 time:
-Secrets found:
-
-Press z to return to start screen
-Press x to quit'''
-            self.blit_texts(string, WHITE, 256, 192, 32, self.myfont)
-            self.blit_texts(self.difficulty_text, self.difficulty_colour, 480, 320, 32, self.myfont)
-            self.blit_texts(str(self.hits_taken), WHITE, 480, 352, 32, self.myfont)
-            self.blit_texts(str(self.attacks_made), WHITE, 480, 384, 32, self.myfont)
-            self.blit_texts(str(self.times[1]), WHITE, 480, 416, 32, self.myfont)
-            self.blit_texts(str(self.times[2]), WHITE, 480, 448, 32, self.myfont)
-            self.blit_texts(str(self.times[3]), WHITE, 480, 480, 32, self.myfont)
-            self.blit_texts(str(0)+'/3', WHITE, 480, 512, 32, self.myfont)
         pygame.display.flip()
 
     def show_grid_lines(self):
