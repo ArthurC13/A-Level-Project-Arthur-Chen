@@ -968,6 +968,7 @@ class Door(pygame.sprite.Sprite):
     def interact(self):
         if self.open:
             self.game.next_level()
+            self.open = False
         if 'key' in game.player.items and not self.open:
             self.open = True
             self.image = self.opened
@@ -1120,6 +1121,7 @@ class Game():
         self.sprite_group_reset()
         time = (pygame.time.get_ticks()-self.start_time)//10/100
         self.times[self.level] = time
+        print(self.times)
         self.level += 1
         self.start_time = pygame.time.get_ticks()
         if self.level < 4:  #number of levels
@@ -1154,7 +1156,7 @@ class Game():
         self.done = False
         self.mode = 'in game'
         while not self.done:
-            self.dt = self.clock.tick(FPS)/1000
+            self.clock.tick(FPS)
             self.events()
             self.update()
             self.draw()
@@ -1163,24 +1165,24 @@ class Game():
         self.wait = True
         if self.mode == 'pause':
             while self.wait:
-                self.dt = self.clock.tick(FPS)/1000
+                self.clock.tick(FPS)
                 self.events()
                 self.draw()
         elif self.mode == 'death screen':
             while self.wait:
-                self.dt = self.clock.tick(FPS)/1000
+                self.clock.tick(FPS)
                 self.events()
                 self.update()
                 self.draw()
         elif self.mode == 'home screen':
             while self.wait:
-                self.dt = self.clock.tick(FPS)/1000
+                self.clock.tick(FPS)
                 self.events()
                 self.draw_menu()
             self.new_game()
         elif self.mode == 'end screen':
             while self.wait:
-                self.dt = self.clock.tick(FPS)/1000
+                self.clock.tick(FPS)
                 self.events()
                 self.draw()
             self.home_screen()
@@ -1200,7 +1202,9 @@ class Game():
                 if event.key == pygame.K_3:
                     self.show_hit_rect = not self.show_hit_rect
                 if self.mode == 'in game':
-                    if event.key == pygame.K_n:
+                    if event.key == pygame.K_t:
+                        self.player.items.append('key')
+                    if event.key == pygame.K_y:
                         self.next_level()
                     if event.key == pygame.K_r:
                         self.level -= 1
@@ -1382,9 +1386,9 @@ Press m to quit'''
         self.blit_texts(self.difficulty_text, self.difficulty_colour, 288, 192 + displacement, 64, self.myfont)
         text = ''' 
 Game Controlls:
-Arrow Keys to move around
+Arrow keys to move around
 Z key to attack
-X Key to interact with objects
+X key to interact with objects
 Esc key to pause
  
 Game Objective:
