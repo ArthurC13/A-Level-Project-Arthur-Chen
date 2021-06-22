@@ -892,17 +892,6 @@ class Melee_attack(pygame.sprite.Sprite):
 # -- Map and Camera
 
 #Map class
-class Map():
-    def __init__(self, map_path):
-        self.maplist = []
-        with open(map_path) as f:
-            for i in f:
-                self.maplist.append(i.strip())
-        self.tilewidth = len(self.maplist[0])
-        self.tileheight = len(self.maplist)
-        self.width = self.tilewidth * TILESIZE
-        self.height = self.tileheight * TILESIZE
-
 class TiledMap:
     def __init__(self, filename):
         tm = pytmx.load_pygame(filename, pixelalpha=True)
