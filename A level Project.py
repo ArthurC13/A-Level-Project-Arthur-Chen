@@ -1121,7 +1121,6 @@ class Game():
         self.sprite_group_reset()
         time = (pygame.time.get_ticks()-self.start_time)//10/100
         self.times[self.level] = time
-        print(self.times)
         self.level += 1
         self.start_time = pygame.time.get_ticks()
         if self.level < 4:  #number of levels
@@ -1313,9 +1312,9 @@ Press m to quit'''
             self.blit_texts(self.difficulty_text, self.difficulty_colour, 480, 320-offset, 32, self.myfont)
             self.blit_texts(str(self.hits_taken), WHITE, 480, 352-offset, 32, self.myfont)
             self.blit_texts(str(self.attacks_made), WHITE, 480, 384-offset, 32, self.myfont)
-            self.blit_texts(str(self.times[1]//60) + ' minutes ' + "{:.2f}".format(self.times[1]%60) + ' seconds', WHITE, 480, 416-offset, 32, self.myfont)
-            self.blit_texts(str(self.times[2]//60) + ' minutes ' + "{:.2f}".format(self.times[2]%60) + ' seconds', WHITE, 480, 448-offset, 32, self.myfont)
-            self.blit_texts(str(self.times[3]//60) + ' minutes ' + str(self.times[3]%60) + ' seconds', WHITE, 480, 480-offset, 32, self.myfont)
+            self.blit_texts("{:.0f}".format(self.times[1]//60) + ' minutes ' + "{:.2f}".format(self.times[1]%60) + ' seconds', WHITE, 480, 416-offset, 32, self.myfont)
+            self.blit_texts("{:.0f}".format(self.times[2]//60) + ' minutes ' + "{:.2f}".format(self.times[2]%60) + ' seconds', WHITE, 480, 448-offset, 32, self.myfont)
+            self.blit_texts("{:.0f}".format(self.times[3]//60) + ' minutes ' + "{:.2f}".format(self.times[3]%60) + ' seconds', WHITE, 480, 480-offset, 32, self.myfont)
             self.blit_texts(str(0)+'/3', WHITE, 480, 512-offset, 32, self.myfont)
 
     def draw(self):
