@@ -1001,9 +1001,7 @@ class Game():
             if tile_object.name == 'slime':
                 Slime(self, tile_object.x, tile_object.y)
             if tile_object.name == 'demon':
-                self.demon = Demon(self, tile_object.x, tile_object.y, tile_object.health)
-            if tile_object.name == 'hell_hound':
-                Hell_hound(self, tile_object.x, tile_object.y)
+                Demon(self, tile_object.x, tile_object.y, tile_object.health)
             if tile_object.name == 'ladder':
                 Ladder(self, tile_object.x, tile_object.y, tile_object.width, tile_object.height)
             if tile_object.name == 'water':
@@ -1150,13 +1148,13 @@ class Game():
             string += '\nFPS: ' + "{:.2f}".format(self.clock.get_fps())
             self.blit_texts(string, WHITE, WIDTH-416, 64, 32, self.myfont)
         if self.mode == 'pause':
-            self.dimm_screen()
+            self.dim_screen()
             self.blit_texts('Game Paused\nPress Esc or z to continue\nPress x to return to start screen', WHITE, 256, 256, 32, self.myfont)
         elif self.mode == 'death screen':
-            self.dimm_screen()
+            self.dim_screen()
             self.blit_texts('Game Over\nPress n to restart\nPress m to return to start screen', WHITE, 256, 256, 32, self.myfont)
         elif self.mode == 'end screen':
-            self.dimm_screen()
+            self.dim_screen()
             string = '''Game Completed!
 Thank you for playing!
 
@@ -1206,7 +1204,7 @@ Press m to quit'''
         for y in range(0, HEIGHT, TILESIZE):
             pygame.draw.line(self.screen, WHITE, (0, y), (WIDTH, y))
 
-    def dimm_screen(self):
+    def dim_screen(self):
         rectangle = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
         rectangle.set_alpha(200)
         rectangle.fill(BLACK)
