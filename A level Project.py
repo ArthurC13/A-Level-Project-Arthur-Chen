@@ -95,7 +95,7 @@ def on_floor(a):
 
 def last_enemy(x, y, direction):
     if len(game.enemy_group.sprites()) == 1:
-        Key(game, x, y, direction)
+        game.key = Key(game, x, y, direction, True)
 
 #Player class
 class Player(pygame.sprite.Sprite):
@@ -239,6 +239,7 @@ class Player(pygame.sprite.Sprite):
     def interact(self):
         hits = pygame.sprite.spritecollide(self, game.item_group, False, collide_hit_rect)
         hits += pygame.sprite.spritecollide(self, game.door_group, False, collide_hit_rect)
+        hits += pygame.sprite.spritecollide(self, game.treasure_group, False, collide_hit_rect)
         if hits:
             for i in hits:
                 i.interact()
@@ -714,7 +715,7 @@ class Demon(pygame.sprite.Sprite):
         
 #Key class
 class Key(pygame.sprite.Sprite):
-    def __init__(self, game, x, y, face_left):
+    def __init__(self, game, x, y, face_left, updates):
         self.groups = game.item_group
         pygame.sprite.Sprite.__init__(self, self.groups)
         self.game = game
@@ -739,6 +740,7 @@ class Key(pygame.sprite.Sprite):
         self.last_sprite_time = pygame.time.get_ticks()
         self.health = 100
         self.invincible = False
+        self.updates = updates
 
     def movements(self):
         self.acc = pygame.math.Vector2(0, GRAVITY)
@@ -764,20 +766,21 @@ class Key(pygame.sprite.Sprite):
                 self.last_sprite_time = pygame.time.get_ticks()
     
     def update(self):
-        self.health = 100
-        self.movements()
-        self.acc.x += self.vel.x*FRICTION
-        self.vel += self.acc
-        self.vel.y = min(self.vel.y, 15)        #termial velocity
-        self.pos += self.vel + 0.5 * self.acc
-        self.hit_rect.x = int(self.pos.x)
-        wall_collisions(self, 'x')
-        self.hit_rect.y = int(self.pos.y)
-        wall_collisions(self, 'y')
-        self.rect.center = (self.hit_rect.center[0], self.hit_rect.center[1])
-        if abs(self.vel.x) < 0.2:
-            self.vel.x = 0
-        self.animations()
+        if self.updates:
+            self.health = 100
+            self.movements()
+            self.acc.x += self.vel.x*FRICTION
+            self.vel += self.acc
+            self.vel.y = min(self.vel.y, 15)        #termial velocity
+            self.pos += self.vel + 0.5 * self.acc
+            self.hit_rect.x = int(self.pos.x)
+            wall_collisions(self, 'x')
+            self.hit_rect.y = int(self.pos.y)
+            wall_collisions(self, 'y')
+            self.rect.center = (self.hit_rect.center[0], self.hit_rect.center[1])
+            if abs(self.vel.x) < 0.2:
+                self.vel.x = 0
+            self.animations()
 
 #Wall class
 class Wall(pygame.sprite.Sprite):
@@ -844,6 +847,31 @@ class Door(pygame.sprite.Sprite):
             self.game.next_level()
             self.open = False
         if 'key' in game.player.items and not self.open:
+            self.open = True
+            self.image = self.opened
+
+#Treasure class
+class Treasure(pygame.sprite.Sprite):
+    def __init__(self, game, x, y, type):
+        self.groups = game.all_sprites_group, game.treasure_group
+        pygame.sprite.Sprite.__init__(self, self.groups)
+        self.game = game
+        image1 = 'images/treasure/type' + str(type) + 'closed.png'
+        image2 = 'images/treasure/type' + str(type) + 'opened.png'
+        self.closed = pygame.transform.scale(pygame.image.load(image1), (30,36))
+        self.opened = pygame.transform.scale(pygame.image.load(image2), (30,36))
+        self.image = self.closed
+        self.rect = self.image.get_rect()
+        self.hit_rect = self.rect
+        x, y = int(x), int(y)
+        self.x = x
+        self.y = y
+        self.rect.x = x
+        self.rect.y = y
+        self.open = False
+
+    def interact(self):
+        if not self.open:
             self.open = True
             self.image = self.opened
         
@@ -955,6 +983,7 @@ class Game():
         self.wall_group = pygame.sprite.Group()
         self.ladder_group = pygame.sprite.Group()
         self.door_group = pygame.sprite.Group()
+        self.treasure_group = pygame.sprite.Group()
         self.water_group = pygame.sprite.Group()
         self.enemy_group = pygame.sprite.Group()
         self.slime_group = pygame.sprite.Group()
@@ -986,10 +1015,14 @@ class Game():
         self.times[self.level] = time
         self.level += 1
         self.start_time = pygame.time.get_ticks()
+        self.load_items()
         if self.level < 4:  #number of levels
             self.load_map(self.level)
         else:
             self.game_complete()
+
+    def load_items(self):
+        self.key = Key(self, -50, -50, True, False)
 
     def load_map(self, level):
         self.map = TiledMap('maps/map'+str(level)+'.tmx')
@@ -1010,6 +1043,8 @@ class Game():
                 Wall(self, tile_object.x, tile_object.y, tile_object.width, tile_object.height)
             if tile_object.name == 'door':
                 Door(self, tile_object.x, tile_object.y)
+            if tile_object.name == 'treasure':
+                Treasure(self, tile_object.x, tile_object.y, level)
         self.camera = Camera(self.map.width, self.map.height, self.player.pos.x, self.player.pos.y)
 
     def game_loop(self):
@@ -1140,12 +1175,18 @@ class Game():
                 self.blit_texts(string, RED, 96, 96, 32, self.myfont)
             string = 'Enemies remaining: ' + str(len(game.enemy_group.sprites()))
             self.blit_texts(string, WHITE, 96, 128, 32, self.myfont)
+            if self.player.items:
+                string = 'Items:'
+            else:
+                string = 'Items: None'
+            self.blit_texts(string, WHITE, 96, 160, 32, self.myfont)
         if self.show_stats:
             string = 'Camera Offset x: ' + str(self.camera.x) + '\nCamera Offset y: ' + str(self.camera.y)
             string += '\nPlayer x: ' + str(self.player.rect.x) + '\nPlayer y: ' + str(self.player.rect.y)
             string += '\nPlayer Acc: ' + str(self.player.acc) + '\nPlayer Vel: ' + str(self.player.vel)
             string += '\nPlayer Dmg: ' + str(self.player.attack_dmg)
             string += '\nFPS: ' + "{:.2f}".format(self.clock.get_fps())
+            string += '\nItems: ' + str(self.player.items)
             self.blit_texts(string, WHITE, WIDTH-416, 64, 32, self.myfont)
         if self.mode == 'pause':
             self.dim_screen()
@@ -1195,6 +1236,12 @@ Press m to quit'''
                 pygame.draw.rect(self.screen, WHITE, self.camera.apply_rect(i.hit_rect), 2)
             for i in self.item_group:
                 pygame.draw.rect(self.screen, WHITE, self.camera.apply_rect(i.hit_rect), 2)
+        num = 0
+        for i in self.player.items:
+            if i == 'key':
+                self.key.animations()
+                self.screen.blit(self.key.image, (96+num,192))
+            num += 32
         self.draw_texts()
         pygame.display.flip()
 
@@ -1288,8 +1335,6 @@ game.home_screen()
 while run:
     game.game_loop()
     game.wait_loop()
-
-
 
 
 

@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.5" tiledversion="1.6.0" orientation="orthogonal" renderorder="right-down" width="50" height="30" tilewidth="32" tileheight="32" infinite="0" nextlayerid="5" nextobjectid="36">
+<map version="1.5" tiledversion="1.6.0" orientation="orthogonal" renderorder="right-down" width="50" height="30" tilewidth="32" tileheight="32" infinite="0" nextlayerid="5" nextobjectid="37">
  <tileset firstgid="1" source="cavesofgallet_tiles.tsx"/>
  <tileset firstgid="97" source="platformer_tiles.tsx"/>
  <layer id="1" name="Background" width="50" height="30">
@@ -102,5 +102,6 @@
   <object id="32" name="wall" x="160" y="160" width="160" height="8"/>
   <object id="33" name="slime" x="872" y="360" width="16" height="16"/>
   <object id="34" name="slime" x="1160" y="360" width="16" height="16"/>
+  <object id="36" name="treasure" x="193" y="124" width="30" height="36"/>
  </objectgroup>
 </map>
