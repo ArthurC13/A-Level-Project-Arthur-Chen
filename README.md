@@ -2,7 +2,7 @@
 
 A simple platformer game inspired by Cave Story and Hollow knight
 
-Credits:
+# Credits:
 
 Fonts:
 m5x7.ttf by Daniel Linssen from https://managore.itch.io/m5x7
