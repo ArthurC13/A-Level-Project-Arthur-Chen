@@ -874,6 +874,7 @@ class Treasure(pygame.sprite.Sprite):
         if not self.open:
             self.open = True
             self.image = self.opened
+            self.game.secrets_found += 1
         
 
 # -- Utility classes
@@ -1008,6 +1009,7 @@ class Game():
         self.times = [0,0,0,0]
         self.hits_taken = 0
         self.attacks_made = 0
+        self.secrets_found = 0
         
     def next_level(self):
         self.sprite_group_reset()
@@ -1217,7 +1219,7 @@ Press m to quit'''
             self.blit_texts("{:.0f}".format(self.times[1]//60) + ' minutes ' + "{:.2f}".format(self.times[1]%60) + ' seconds', WHITE, 480, 416-offset, 32, self.myfont)
             self.blit_texts("{:.0f}".format(self.times[2]//60) + ' minutes ' + "{:.2f}".format(self.times[2]%60) + ' seconds', WHITE, 480, 448-offset, 32, self.myfont)
             self.blit_texts("{:.0f}".format(self.times[3]//60) + ' minutes ' + "{:.2f}".format(self.times[3]%60) + ' seconds', WHITE, 480, 480-offset, 32, self.myfont)
-            self.blit_texts(str(0)+'/3', WHITE, 480, 512-offset, 32, self.myfont)
+            self.blit_texts(str(self.secrets_found)+'/3', WHITE, 480, 512-offset, 32, self.myfont)
 
     def draw(self):
         self.screen.blit(self.map_img, self.camera.apply_rect(self.map_rect))
